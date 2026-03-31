@@ -1,0 +1,31 @@
+version: "3.5"
+services:
+  hermes-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UPSTREAM_VERSION: latest
+    image: hermes-agent.dnp.dappnode.eth:0.1.0
+    container_name: DAppNodePackage-hermes-agent.dnp.dappnode.eth
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      TERM: xterm-256color
+      NODE_ENV: production
+      API_SERVER_ENABLED: "true"
+      API_SERVER_PORT: "3000"
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_CORS_ORIGINS: "*"
+      GATEWAY_ALLOW_ALL_USERS: "true"
+    volumes:
+      - hermes_data:/opt/data
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  hermes_data: {}

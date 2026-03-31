@@ -1,0 +1,81 @@
+{
+  "name": "hermes-agent.dnp.dappnode.eth",
+  "version": "0.1.0",
+  "upstreamVersion": "latest",
+  "upstreamRepo": "NousResearch/hermes-agent",
+  "upstreamArg": "UPSTREAM_VERSION",
+  "shortDescription": "Self-improving AI agent with multi-LLM support and messaging gateway",
+  "description": "Hermes Agent is a self-improving AI agent built by Nous Research. It features a built-in learning loop — creating skills from experience, improving them during use, and building a deepening model of who you are across sessions.\n\n- **Web Gateway**: Full-featured web interface for interacting with AI\n- **Multi-LLM Support**: OpenRouter, OpenAI, Anthropic, Google Gemini, Ollama, Groq, and more\n- **Messaging Gateway**: Telegram, Discord, Slack, WhatsApp, Signal — all from a single process\n- **Skills System**: Agent-curated procedural memory that self-improves\n- **Persistent Memory**: Cross-session recall with user modeling\n- **Cron Scheduling**: Automated tasks with delivery to any platform\n- **Subagent Delegation**: Spawn isolated subagents for parallel workstreams\n\nRun your own AI agent with full control over your data and API keys.",
+  "type": "service",
+  "architectures": ["linux/amd64"],
+  "author": "DAppNode Association <admin@dappnode.io>",
+  "license": "MIT",
+  "categories": ["AI", "Developer tools", "Communications"],
+  "keywords": [
+    "ai",
+    "llm",
+    "hermes",
+    "nous-research",
+    "agent",
+    "chatgpt",
+    "claude",
+    "openai",
+    "anthropic",
+    "self-hosted",
+    "telegram",
+    "discord",
+    "whatsapp",
+    "skills"
+  ],
+  "links": {
+    "homepage": "https://hermes-agent.nousresearch.com",
+    "ui": "http://hermes-agent.dappnode:8080",
+    "api": "http://hermes-agent.dappnode:3000",
+    "terminal": "http://hermes-agent.dappnode:7681",
+    "docs": "https://hermes-agent.nousresearch.com/docs/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dappnode/DAppNodePackage-Hermes-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/dappnode/DAppNodePackage-Hermes-agent/issues"
+  },
+  "requirements": {
+    "minimumDappnodeVersion": "0.2.50"
+  },
+  "backup": [
+    {
+      "name": "hermes-data",
+      "path": "/opt/data",
+      "service": "hermes-agent"
+    }
+  ],
+  "exposable": [
+    {
+      "name": "Hermes Agent API",
+      "description": "OpenAI-compatible API for programmatic access to Hermes AI agent",
+      "serviceName": "hermes-agent",
+      "port": 3000
+    },
+    {
+      "name": "Hermes Agent Setup Wizard",
+      "description": "Web-based setup wizard for easy configuration",
+      "serviceName": "hermes-agent",
+      "port": 8080
+    },
+    {
+      "name": "Hermes Web Terminal",
+      "description": "Browser-based terminal for running hermes CLI commands",
+      "serviceName": "hermes-agent",
+      "port": 7681
+    }
+  ],
+  "warnings": {
+    "onRemove": "Removing this package will delete all your Hermes Agent configuration, conversation history, skills, memories, and cached data. Make sure to create a backup first."
+  },
+  "style": {
+    "featuredBackground": "linear-gradient(135deg, #FFD700 0%, #764ba2 100%)",
+    "featuredColor": "white"
+  }
+}

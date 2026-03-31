@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Agent — DAppNode</title>
+  <style>
+    :root {
+      --primary: #FFD700;
+      --primary-dark: #E6C200;
+      --accent: #764ba2;
+      --bg: #0f1117;
+      --card: #1a1d2e;
+      --card-hover: #222640;
+      --border: #2d3148;
+      --text: #e4e4ed;
+      --text-muted: #8b8fa3;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+    }
+
+    /* ---- Top Nav ---- */
+    .topnav {
+      display: flex; align-items: center; gap: 2rem;
+      border-bottom: 1px solid var(--border); padding: 0 2rem;
+      background: var(--card);
+    }
+    .topnav .logo {
+      font-weight: 700; font-size: 1.1rem; padding: 1rem 0;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; white-space: nowrap;
+    }
+    .topnav .tabs { display: flex; gap: 0; margin-left: 1rem; }
+    .topnav .tab {
+      padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-muted);
+      cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+      user-select: none;
+    }
+    .topnav .tab:hover { color: var(--text); }
+    .topnav .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* ---- Tab Content ---- */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .page { max-width: 720px; margin: 0 auto; padding: 2rem 1rem; }
+
+    /* ---- Dashboard ---- */
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .status-grid { grid-template-columns: 1fr; } }
+    .status-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+    }
+    .status-card .label { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 4px; }
+    .status-card .value { font-size: 1.05rem; font-weight: 600; }
+    .status-card .value.ok { color: var(--success); }
+    .status-card .value.err { color: var(--error); }
+    .status-card .value.warn { color: var(--warning); }
+    .quick-links { display: flex; flex-direction: column; gap: 10px; margin-top: 1.5rem; }
+    .quick-links a {
+      display: block; padding: 12px 16px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+      text-decoration: none; font-size: 0.9rem; transition: border 0.2s;
+    }
+    .quick-links a:hover { border-color: var(--primary); }
+    .quick-links a small { color: var(--text-muted); display: block; margin-top: 2px; font-size: 0.8rem; }
+
+    /* ---- Setup Wizard ---- */
+    .progress { display: flex; gap: 6px; margin-bottom: 2rem; }
+    .progress .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+    .progress .bar.active { background: var(--primary); }
+    .progress .bar.done { background: var(--success); }
+    .step { display: none; }
+    .step.active { display: block; }
+    .step h2 { font-size: 1.35rem; margin-bottom: 0.5rem; }
+    .step .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 480px) { .cards { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
+      padding: 1rem; cursor: pointer; transition: all 0.2s;
+    }
+    .card:hover { background: var(--card-hover); border-color: var(--primary); }
+    .card.selected { border-color: var(--primary); background: var(--card-hover); }
+    .card .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .card .card-desc { color: var(--text-muted); font-size: 0.8rem; line-height: 1.4; }
+    .card .card-tag {
+      display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px;
+      margin-top: 6px; background: rgba(255,215,0,0.15); color: var(--primary);
+    }
+    .card .card-tag.free { background: rgba(52,211,153,0.15); color: var(--success); }
+    .field { margin-bottom: 1.25rem; }
+    .field label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 6px; }
+    .field .hint { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; line-height: 1.4; }
+    .field input, .field select {
+      width: 100%; padding: 10px 14px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+      font-size: 0.95rem; outline: none; transition: border 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: var(--primary); }
+    .field input::placeholder { color: var(--text-muted); }
+    .field select option { background: var(--card); color: var(--text); }
+    .field .optional-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+    .model-input-wrap { position: relative; }
+    .model-input-wrap input { padding-right: 40px; }
+    .model-suggestions {
+      display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+      max-height: 220px; overflow-y: auto; background: var(--card);
+      border: 1px solid var(--border); border-radius: 0 0 8px 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .model-suggestions.open { display: block; }
+    .model-suggestions .sg-item {
+      padding: 8px 14px; cursor: pointer; font-size: 0.85rem;
+      border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;
+    }
+    .model-suggestions .sg-item:hover { background: var(--card-hover); }
+    .model-suggestions .sg-item .sg-id { color: var(--text); }
+    .model-suggestions .sg-item .sg-ctx { color: var(--text-muted); font-size: 0.75rem; }
+    .model-suggestions .sg-loading { padding: 12px 14px; color: var(--text-muted); font-size: 0.85rem; }
+    .actions { display: flex; gap: 12px; margin-top: 2rem; }
+    .btn { padding: 12px 28px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; flex: 1; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { background: var(--card-hover); }
+    .probe-btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem;
+    }
+    .probe-btn:hover { border-color: var(--primary); }
+    .probe-result { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5; }
+    .probe-result.ok { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--success); }
+    .probe-result.fail { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: var(--error); }
+    .config-preview {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1rem; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.8rem;
+      line-height: 1.6; overflow-x: auto; max-height: 400px; overflow-y: auto;
+      white-space: pre; color: var(--text-muted);
+    }
+    .success-icon { font-size: 3rem; text-align: center; margin-bottom: 1rem; }
+
+    /* ---- Terminal ---- */
+    .terminal-wrap { display: flex; flex-direction: column; height: calc(100vh - 53px); }
+    .terminal-wrap iframe { flex: 1; border: none; background: #000; }
+    .terminal-hint {
+      padding: 8px 2rem; background: var(--card); border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.8rem;
+    }
+    .terminal-hint code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <!-- ---- Top Navigation ---- -->
+  <nav class="topnav">
+    <div class="logo">&#9764; Hermes Agent</div>
+    <div class="tabs">
+      <div class="tab active" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="setup">Setup</div>
+      <div class="tab" data-tab="terminal">Terminal</div>
+    </div>
+  </nav>
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <div class="tab-content active" id="tc-dashboard">
+    <div class="page">
+      <h2 style="margin-bottom:1.25rem">Agent Overview</h2>
+      <div class="status-grid" id="status-grid">
+        <div class="status-card"><div class="label">API Server</div><div class="value" id="st-api">Checking...</div></div>
+        <div class="status-card"><div class="label">Health</div><div class="value" id="st-health">Checking...</div></div>
+        <div class="status-card"><div class="label">Provider</div><div class="value" id="st-provider">—</div></div>
+        <div class="status-card"><div class="label">Model</div><div class="value" id="st-model">—</div></div>
+      </div>
+      <h3 style="margin-bottom:0.75rem">Quick Links</h3>
+      <div class="quick-links">
+        <a href="#" onclick="event.preventDefault(); switchTab('setup')">
+          Setup Wizard
+          <small>Change provider, model, API keys, and messaging integrations</small>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
+          Web Terminal
+          <small>Run hermes CLI commands — hermes model, hermes doctor, hermes config, etc.</small>
+        </a>
+        <a href="http://hermes-agent.dappnode:3000/v1/models" target="_blank">
+          API Server — /v1/models
+          <small>OpenAI-compatible API endpoint for frontends like Open WebUI or LobeChat</small>
+        </a>
+        <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
+          Health Check
+          <small>Verify the API server is running</small>
+        </a>
+        <a href="https://hermes-agent.nousresearch.com/docs/" target="_blank">
+          Documentation
+          <small>Full Hermes Agent docs by Nous Research</small>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETUP WIZARD ==================== -->
+  <div class="tab-content" id="tc-setup">
+    <div class="page">
+      <div class="progress" id="progress">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      </div>
+
+      <!-- Step 0: Provider -->
+      <div class="step active" data-step="0">
+        <h2>Choose your AI Provider</h2>
+        <div class="subtitle">Pick one to get started — you can change later via the Terminal tab (<code>hermes model</code>) or by re-running this wizard.</div>
+        <div class="cards" id="provider-cards"></div>
+        <div class="actions">
+          <button class="btn btn-primary" id="btn-step0" disabled onclick="goTo(1)">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 1: API Key / Model config -->
+      <div class="step" data-step="1">
+        <div id="provider-config"></div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo(0)">Back</button>
+          <button class="btn btn-primary" id="btn-step1" onclick="goTo(2)">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Messaging + Integrations -->
+      <div class="step" data-step="2">
+        <h2>Integrations</h2>
+        <div class="subtitle">Optional — skip any you don't need.</div>
+        <div class="field">
+          <label>Telegram Bot Token <span class="optional-badge">optional</span></label>
+          <div class="hint">From <strong>@BotFather</strong> on Telegram.</div>
+          <input type="text" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNO...">
+        </div>
+        <div class="field" id="telegram-users-field" style="display:none">
+          <label>Allowed Telegram User IDs <span class="optional-badge">optional</span></label>
+          <div class="hint">Comma-separated. Use <strong>@userinfobot</strong> to find yours.</div>
+          <input type="text" id="telegram-users" placeholder="123456789,987654321">
+        </div>
+        <div class="field">
+          <label>Discord Bot Token <span class="optional-badge">optional</span></label>
+          <div class="hint">From the Discord Developer Portal.</div>
+          <input type="text" id="discord-token" placeholder="MTIz...">
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo(1)">Back</button>
+          <button class="btn btn-primary" onclick="showReview()">Review</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Review & Save -->
+      <div class="step" data-step="3">
+        <h2>Review &amp; Save</h2>
+        <div class="subtitle">You can also edit these files from the Terminal tab, or re-run this wizard at any time.</div>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem;">.env changes</h3>
+        <div class="config-preview" id="env-preview" style="margin-bottom:1rem;"></div>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem;">config.yaml changes</h3>
+        <div class="config-preview" id="config-preview"></div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="goTo(2)">Back</button>
+          <button class="btn btn-primary" id="btn-save" onclick="saveConfig()">Save Configuration</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="step" data-step="4">
+        <div class="success-icon">&#10003;</div>
+        <h2 style="text-align:center">Configuration Saved!</h2>
+        <div class="subtitle" style="text-align:center">
+          The gateway will pick up the new configuration. You may need to restart the package from the DAppNode UI.
+        </div>
+        <div class="quick-links">
+          <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
+            Open Terminal
+            <small>Run <code>hermes doctor</code> to verify configuration or <code>hermes model</code> to change models</small>
+          </a>
+          <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
+            Check API Health
+            <small>Verify the API server is running with new config</small>
+          </a>
+          <a href="#" onclick="event.preventDefault(); goTo(0);">
+            Run Wizard Again
+            <small>Reconfigure from scratch</small>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TERMINAL ==================== -->
+  <div class="tab-content" id="tc-terminal">
+    <div class="terminal-wrap">
+      <div class="terminal-hint">
+        Useful commands:
+        <code>hermes model</code> — change provider/model &nbsp;
+        <code>hermes doctor</code> — diagnose issues &nbsp;
+        <code>hermes config show</code> — view config &nbsp;
+        <code>hermes status</code> — agent status &nbsp;
+        <code>hermes setup</code> — CLI setup wizard
+      </div>
+      <iframe id="terminal-frame" src="about:blank"></iframe>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // Tab navigation
+    // =========================================================================
+    document.querySelectorAll(".topnav .tab").forEach(tab => {
+      tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    });
+
+    function switchTab(name) {
+      document.querySelectorAll(".topnav .tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+      document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
+      const el = document.getElementById("tc-" + name);
+      if (el) el.classList.add("active");
+      // Lazy-load terminal iframe
+      if (name === "terminal") {
+        const frame = document.getElementById("terminal-frame");
+        if (frame.src === "about:blank" || !frame.src.includes("7681")) {
+          frame.src = location.protocol + "//" + location.hostname + ":7681";
+        }
+      }
+      if (name === "dashboard") refreshDashboard();
+    }
+
+    // =========================================================================
+    // Dashboard
+    // =========================================================================
+    async function refreshDashboard() {
+      try {
+        const resp = await fetch("/api/health");
+        const data = await resp.json();
+        const apiEl = document.getElementById("st-api");
+        const healthEl = document.getElementById("st-health");
+        if (data.apiServer) {
+          apiEl.textContent = "Running"; apiEl.className = "value ok";
+          healthEl.textContent = data.status === "ok" ? "Healthy" : "Degraded";
+          healthEl.className = "value " + (data.status === "ok" ? "ok" : "warn");
+        } else {
+          apiEl.textContent = "Not reachable"; apiEl.className = "value err";
+          healthEl.textContent = "—"; healthEl.className = "value";
+        }
+      } catch {
+        document.getElementById("st-api").textContent = "Error";
+        document.getElementById("st-api").className = "value err";
+      }
+      try {
+        const resp = await fetch("/api/config");
+        const data = await resp.json();
+        const env = data.env || {};
+        const raw = data.config || "";
+        const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
+        const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
+        document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
+        document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
+      } catch {}
+    }
+    refreshDashboard();
+
+    // =========================================================================
+    // Provider definitions
+    // =========================================================================
+    const PROVIDERS = [
+      { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
+      { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
+      { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
+      { id: "google", name: "Google Gemini", desc: "Gemini 3 Pro, 2.5 Pro & Flash", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
+      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
+      { id: "groq", name: "Groq", desc: "Ultra-fast Llama, Qwen, DeepSeek", tag: "Free tier", free: true, envKey: "GROQ_API_KEY", provider: "groq" },
+      { id: "deepseek", name: "DeepSeek", desc: "V3.2, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
+      { id: "huggingface", name: "Hugging Face", desc: "20+ open models via unified router", tag: "Free tier", free: true, envKey: "HF_TOKEN", provider: "huggingface" },
+      { id: "copilot", name: "GitHub Copilot", desc: "GPT-5, Claude, Gemini via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
+      { id: "custom", name: "Custom Endpoint", desc: "Any OpenAI or Anthropic-compatible API", tag: "Advanced", free: false, envKey: null, provider: "custom" },
+    ];
+
+    // Suggested models per provider (shown as autocomplete hints — user can type anything)
+    const SUGGESTED_MODELS = {
+      openai: ["gpt-4.1", "gpt-4.1-mini", "gpt-5.2", "o4-mini", "o3", "gpt-4o"],
+      anthropic: ["claude-sonnet-4-5-20250929", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
+      google: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+      groq: ["llama-3.3-70b-versatile", "meta-llama/llama-4-scout-17b-16e-instruct", "qwen/qwen3-32b"],
+      deepseek: ["deepseek-chat", "deepseek-reasoner"],
+      huggingface: ["Qwen/Qwen3-235B-A22B-Thinking-2507", "deepseek-ai/DeepSeek-V3.2"],
+      copilot: ["gpt-5.4", "claude-sonnet-4", "gpt-4o"],
+    };
+
+    let currentStep = 0;
+    let selectedProvider = null;
+    let openRouterModels = [];
+
+    // =========================================================================
+    // Render provider cards
+    // =========================================================================
+    const cardsEl = document.getElementById("provider-cards");
+    PROVIDERS.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card"; card.dataset.id = p.id;
+      card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div><span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>`;
+      card.onclick = () => selectProviderCard(p.id);
+      cardsEl.appendChild(card);
+    });
+
+    function selectProviderCard(id) {
+      cardsEl.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+      const card = cardsEl.querySelector(`.card[data-id="${id}"]`);
+      if (card) card.classList.add("selected");
+      selectedProvider = PROVIDERS.find(p => p.id === id);
+      document.getElementById("btn-step0").disabled = false;
+    }
+
+    document.getElementById("telegram-token").addEventListener("input", (e) => {
+      document.getElementById("telegram-users-field").style.display = e.target.value.trim() ? "block" : "none";
+    });
+
+    // =========================================================================
+    // Wizard navigation
+    // =========================================================================
+    function goTo(step) {
+      currentStep = step;
+      document.querySelectorAll("#tc-setup .step").forEach(s => s.classList.remove("active"));
+      const el = document.querySelector(`#tc-setup .step[data-step="${step}"]`);
+      if (el) el.classList.add("active");
+      document.querySelectorAll(".progress .bar").forEach((bar, i) => {
+        bar.className = "bar";
+        if (i < step) bar.classList.add("done");
+        else if (i === step) bar.classList.add("active");
+      });
+      if (step === 1 && selectedProvider) renderProviderConfig();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // =========================================================================
+    // Model input with autocomplete/suggestions
+    // =========================================================================
+    function createModelInput(containerId, suggestionsArr, placeholder) {
+      const wrap = document.createElement("div");
+      wrap.className = "model-input-wrap";
+      const input = document.createElement("input");
+      input.type = "text"; input.id = containerId + "-input";
+      input.placeholder = placeholder || "Type a model ID or select from suggestions...";
+      if (suggestionsArr.length) {
+        const first = typeof suggestionsArr[0] === "string" ? suggestionsArr[0] : suggestionsArr[0].id;
+        input.value = first;
+      }
+
+      const dropdown = document.createElement("div");
+      dropdown.className = "model-suggestions";
+
+      function renderItems(filter) {
+        dropdown.innerHTML = "";
+        const q = (filter || "").toLowerCase();
+        const items = q ? suggestionsArr.filter(m => {
+          const id = typeof m === "string" ? m : m.id;
+          const name = typeof m === "string" ? m : (m.name || m.id);
+          return id.toLowerCase().includes(q) || name.toLowerCase().includes(q);
+        }) : suggestionsArr;
+        items.slice(0, 50).forEach(m => {
+          const id = typeof m === "string" ? m : m.id;
+          const ctx = (typeof m === "object" && m.context_length) ? (Math.round(m.context_length / 1000) + "k ctx") : "";
+          const div = document.createElement("div");
+          div.className = "sg-item";
+          div.innerHTML = `<span class="sg-id">${id}</span>${ctx ? `<span class="sg-ctx">${ctx}</span>` : ""}`;
+          div.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = id; dropdown.classList.remove("open"); });
+          dropdown.appendChild(div);
+        });
+        if (!items.length && q) {
+          dropdown.innerHTML = `<div class="sg-loading">No matches — your typed value will be used as-is</div>`;
+        }
+        dropdown.classList.toggle("open", items.length > 0 || !!q);
+      }
+
+      input.addEventListener("focus", () => renderItems(input.value));
+      input.addEventListener("input", () => renderItems(input.value));
+      input.addEventListener("blur", () => setTimeout(() => dropdown.classList.remove("open"), 150));
+
+      wrap.appendChild(input);
+      wrap.appendChild(dropdown);
+      return wrap;
+    }
+
+    // =========================================================================
+    // Dynamic provider config (Step 1)
+    // =========================================================================
+    function renderProviderConfig() {
+      const container = document.getElementById("provider-config");
+      const p = selectedProvider;
+
+      if (p.id === "ollama") {
+        container.innerHTML = `
+          <h2>Configure Ollama</h2>
+          <div class="subtitle">Ollama lets you run AI models locally on your DAppNode for free.</div>
+          <button class="probe-btn" id="probe-btn" onclick="probeOllama()">
+            <span id="probe-icon">&#128269;</span> Auto-detect Ollama on DAppNode
+          </button>
+          <div id="probe-result"></div>
+          <div class="field">
+            <label>Ollama Server URL</label>
+            <div class="hint">If auto-detect doesn't find it, enter the URL manually.</div>
+            <input type="text" id="ollama-url" placeholder="http://ollama.dappnode:11434">
+          </div>
+          <div class="field">
+            <label>Model</label>
+            <div class="hint">Type a model name or run auto-detect to see available models.</div>
+            <div id="ollama-model-container"></div>
+          </div>
+        `;
+        const mc = document.getElementById("ollama-model-container");
+        mc.appendChild(createModelInput("ollama-model", [], "llama3, qwen2.5:14b, ..."));
+        return;
+      }
+
+      if (p.id === "custom") {
+        container.innerHTML = `
+          <h2>Custom Endpoint</h2>
+          <div class="subtitle">Connect to any OpenAI-compatible or Anthropic-compatible API endpoint.</div>
+          <div class="field">
+            <label>API Spec</label>
+            <div class="hint">Which API format does your endpoint use?</div>
+            <select id="custom-spec">
+              <option value="openai-chat" selected>OpenAI Chat Completions</option>
+              <option value="openai-responses">OpenAI Responses</option>
+              <option value="anthropic">Anthropic Messages</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Base URL</label>
+            <div class="hint">The API base URL. Example: https://api.example.com/v1</div>
+            <input type="text" id="custom-base-url" placeholder="https://api.example.com/v1">
+          </div>
+          <div class="field">
+            <label>API Key</label>
+            <div class="hint">Bearer token for authentication.</div>
+            <input type="password" id="custom-api-key" placeholder="sk-...">
+          </div>
+          <div class="field">
+            <label>Model Name</label>
+            <div class="hint">Type the model identifier your endpoint expects.</div>
+            <input type="text" id="custom-model-name" placeholder="gpt-4, claude-3-opus, llama3, ...">
+          </div>
+        `;
+        return;
+      }
+
+      // OpenRouter — fetch models dynamically
+      if (p.id === "openrouter") {
+        container.innerHTML = `
+          <h2>Configure OpenRouter</h2>
+          <div class="subtitle">Access 200+ models with one API key. Models are fetched live from OpenRouter.</div>
+          <div class="field">
+            <label>OpenRouter API Key</label>
+            <div class="hint">Get one at openrouter.ai/keys</div>
+            <input type="password" id="api-key" placeholder="Paste your API key here">
+          </div>
+          <div class="field">
+            <label>Model</label>
+            <div class="hint">Type to search available models, or enter any model ID.</div>
+            <div id="or-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from OpenRouter...</div></div>
+          </div>
+        `;
+        fetchOpenRouterModels();
+        return;
+      }
+
+      // Standard provider with API key + suggested models
+      const keyMap = {
+        openai: ["OpenAI API Key", "Get one at platform.openai.com/api-keys"],
+        anthropic: ["Anthropic API Key", "Get one at console.anthropic.com"],
+        google: ["Google AI API Key", "Get one at aistudio.google.com/app/apikey"],
+        groq: ["Groq API Key", "Get one at console.groq.com (free tier available)"],
+        deepseek: ["DeepSeek API Key", "Get one at platform.deepseek.com"],
+        huggingface: ["Hugging Face Token", "Get one at huggingface.co/settings/tokens (enable Inference Providers permission)"],
+        copilot: ["GitHub Token", "Use a fine-grained PAT with Copilot Requests permission, or run 'hermes model' in the Terminal tab for OAuth login"],
+      };
+      const [label, hint] = keyMap[p.id] || ["API Key", ""];
+      const suggestions = SUGGESTED_MODELS[p.id] || [];
+
+      container.innerHTML = `
+        <h2>Configure ${p.name}</h2>
+        <div class="subtitle">${p.desc}. Enter your API key and select a model.</div>
+        <div class="field">
+          <label>${label}</label>
+          <div class="hint">${hint}</div>
+          <input type="password" id="api-key" placeholder="Paste your API key here">
+        </div>
+        <div class="field">
+          <label>Model</label>
+          <div class="hint">Select a suggested model or type any model ID supported by ${p.name}.</div>
+          <div id="std-model-container"></div>
+        </div>
+      `;
+      const mc = document.getElementById("std-model-container");
+      mc.appendChild(createModelInput("std-model", suggestions, "Type or select a model..."));
+    }
+
+    async function fetchOpenRouterModels() {
+      try {
+        const resp = await fetch("/api/models/openrouter");
+        const data = await resp.json();
+        openRouterModels = data.models || [];
+      } catch {
+        openRouterModels = [];
+      }
+      const mc = document.getElementById("or-model-container");
+      if (!mc) return;
+      mc.innerHTML = "";
+      const suggestions = openRouterModels.length ? openRouterModels : [
+        { id: "anthropic/claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+        { id: "openai/gpt-5.2", name: "GPT-5.2" },
+        { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+        { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1" },
+      ];
+      mc.appendChild(createModelInput("or-model", suggestions,
+        openRouterModels.length ? `Search ${openRouterModels.length} models...` : "Type a model ID (e.g. anthropic/claude-sonnet-4-5)"));
+      const inp = document.getElementById("or-model-input");
+      if (inp && openRouterModels.length) {
+        const claude = openRouterModels.find(m => m.id.includes("claude-sonnet"));
+        inp.value = claude ? claude.id : openRouterModels[0].id;
+      }
+    }
+
+    async function probeOllama() {
+      const btn = document.getElementById("probe-btn");
+      const icon = document.getElementById("probe-icon");
+      const resultEl = document.getElementById("probe-result");
+      btn.disabled = true; icon.textContent = "\u23F3"; resultEl.innerHTML = "";
+      try {
+        const resp = await fetch("/api/ollama/probe");
+        const data = await resp.json();
+        if (data.reachable) {
+          resultEl.innerHTML = `<div class="probe-result ok"><strong>Found Ollama!</strong> at ${data.url}<br>${data.models.length ? "Models: " + data.models.join(", ") : "No models pulled yet."}</div>`;
+          document.getElementById("ollama-url").value = data.url;
+          if (data.models.length) {
+            const mc = document.getElementById("ollama-model-container");
+            mc.innerHTML = "";
+            mc.appendChild(createModelInput("ollama-model", data.models, "Select or type a model..."));
+            document.getElementById("ollama-model-input").value = data.models[0];
+          }
+        } else {
+          resultEl.innerHTML = `<div class="probe-result fail"><strong>No Ollama found.</strong> Make sure an Ollama package is installed and running on your DAppNode.</div>`;
+        }
+      } catch {
+        resultEl.innerHTML = `<div class="probe-result fail">Failed to probe. Enter the URL manually below.</div>`;
+      }
+      btn.disabled = false; icon.textContent = "\uD83D\uDD0D";
+    }
+
+    // =========================================================================
+    // Build config for saving
+    // =========================================================================
+    function getModelValue() {
+      for (const id of ["or-model-input", "std-model-input", "ollama-model-input"]) {
+        const el = document.getElementById(id);
+        if (el && el.value.trim()) return el.value.trim();
+      }
+      return null;
+    }
+
+    function buildEnv() {
+      const env = {};
+      const p = selectedProvider;
+      if (p.id === "ollama") {
+        const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
+        env.OPENAI_BASE_URL = url + "/v1";
+        env.OPENAI_API_KEY = "ollama-local";
+        env.LLM_MODEL = getModelValue() || "llama3";
+      } else if (p.id === "custom") {
+        const spec = document.getElementById("custom-spec").value;
+        const apiKey = (document.getElementById("custom-api-key").value || "").trim();
+        const model = (document.getElementById("custom-model-name").value || "").trim();
+        if (spec === "anthropic") {
+          if (apiKey) env.ANTHROPIC_API_KEY = apiKey;
+          if (model) env.LLM_MODEL = "anthropic/" + model;
+        } else {
+          if (apiKey) env.OPENAI_API_KEY = apiKey;
+          if (model) env.LLM_MODEL = model;
+        }
+      } else {
+        const apiKey = (document.getElementById("api-key").value || "").trim();
+        if (apiKey && p.envKey) env[p.envKey] = apiKey;
+        const model = getModelValue();
+        if (model) {
+          env.LLM_MODEL = p.id === "openrouter" ? model : p.id + "/" + model;
+        }
+      }
+      const tgToken = (document.getElementById("telegram-token").value || "").trim();
+      if (tgToken) {
+        env.TELEGRAM_BOT_TOKEN = tgToken;
+        const tgUsers = (document.getElementById("telegram-users").value || "").trim();
+        if (tgUsers) env.TELEGRAM_ALLOWED_USERS = tgUsers;
+      }
+      const dcToken = (document.getElementById("discord-token").value || "").trim();
+      if (dcToken) env.DISCORD_BOT_TOKEN = dcToken;
+      return env;
+    }
+
+    function buildConfigYaml() {
+      const p = selectedProvider;
+      const lines = [
+        "# Hermes Agent Configuration (generated by DAppNode setup wizard)",
+        "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
+        "", "model:"
+      ];
+      if (p.id === "ollama") {
+        const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
+        lines.push(`  default: "${getModelValue() || "llama3"}"`);
+        lines.push(`  provider: "custom"`);
+        lines.push(`  base_url: "${url}/v1"`);
+      } else if (p.id === "custom") {
+        const spec = document.getElementById("custom-spec").value;
+        const baseUrl = (document.getElementById("custom-base-url").value || "").trim();
+        const model = (document.getElementById("custom-model-name").value || "").trim();
+        if (spec === "anthropic") {
+          lines.push(`  default: "anthropic/${model || "claude-3-opus-20240229"}"`);
+          lines.push(`  provider: "anthropic"`);
+        } else {
+          lines.push(`  default: "${model || "gpt-4"}"`);
+          lines.push(`  provider: "custom"`);
+        }
+        if (baseUrl) lines.push(`  base_url: "${baseUrl}"`);
+      } else {
+        const model = getModelValue();
+        if (model) lines.push(`  default: "${p.id === "openrouter" ? model : p.id + "/" + model}"`);
+        lines.push(`  provider: "${p.provider}"`);
+        if (p.id === "openrouter") lines.push(`  base_url: "https://openrouter.ai/api/v1"`);
+      }
+      lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
+      lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
+      lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
+      lines.push("", "terminal:", '  backend: "local"', '  cwd: "."', "  timeout: 180");
+      lines.push("", "agent:", "  max_turns: 60", '  reasoning_effort: "medium"');
+      lines.push("", "memory:", "  memory_enabled: true", "  user_profile_enabled: true");
+      lines.push("", "compression:", "  enabled: true", "  threshold: 0.50");
+      lines.push("");
+      return lines.join("\n");
+    }
+
+    function showReview() {
+      const env = buildEnv();
+      const yaml = buildConfigYaml();
+      const envLines = [];
+      for (const [k, v] of Object.entries(env)) {
+        if (k.includes("KEY") || k.includes("TOKEN") || k.includes("SECRET")) {
+          envLines.push(`${k}=${v.slice(0, 8)}${"*".repeat(Math.max(0, v.length - 8))}`);
+        } else { envLines.push(`${k}=${v}`); }
+      }
+      document.getElementById("env-preview").textContent = envLines.join("\n") || "(no changes)";
+      document.getElementById("config-preview").textContent = yaml;
+      goTo(3);
+    }
+
+    async function saveConfig() {
+      const btn = document.getElementById("btn-save");
+      btn.disabled = true; btn.textContent = "Saving...";
+      try {
+        const resp = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ env: buildEnv(), configYaml: buildConfigYaml() })
+        });
+        if (resp.ok) { goTo(4); }
+        else {
+          const data = await resp.json();
+          alert("Failed: " + (data.error || "Unknown error"));
+          btn.disabled = false; btn.textContent = "Save Configuration";
+        }
+      } catch (err) {
+        alert("Network error: " + err.message);
+        btn.disabled = false; btn.textContent = "Save Configuration";
+      }
+    }
+  </script>
+</body>
+</html>
