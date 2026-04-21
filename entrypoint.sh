@@ -9,8 +9,24 @@ if [ -f "${INSTALL_DIR}/.venv/bin/activate" ]; then
     source "${INSTALL_DIR}/.venv/bin/activate"
 fi
 
+# Make `hermes` discoverable inside the ttyd web terminal.
+# ttyd spawns `bash -l`, which resets PATH from /etc/profile and loses the
+# venv we activated above. Drop a profile.d snippet so login shells re-add it.
+if [ -d /etc/profile.d ] && [ ! -f /etc/profile.d/hermes-venv.sh ]; then
+    cat > /etc/profile.d/hermes-venv.sh <<EOF
+# Added by DAppNode Hermes Agent package: expose the upstream venv to login shells
+if [ -d "${INSTALL_DIR}/.venv/bin" ]; then
+    export PATH="${INSTALL_DIR}/.venv/bin:\$PATH"
+    export VIRTUAL_ENV="${INSTALL_DIR}/.venv"
+fi
+export HERMES_HOME="${HERMES_HOME}"
+EOF
+    chmod 0644 /etc/profile.d/hermes-venv.sh
+fi
+
 # --- Bootstrap config files (mirrors upstream entrypoint) ---
-mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills}
+# Layout matches upstream docker/entrypoint.sh in v2026.4.16 (Hermes v0.10.0).
+mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills,skins,plans,workspace,home}
 
 if [ ! -f "$HERMES_HOME/.env" ]; then
     cp "$INSTALL_DIR/.env.example" "$HERMES_HOME/.env"
