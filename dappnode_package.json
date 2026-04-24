@@ -1,7 +1,7 @@
 {
   "name": "hermes-agent.dnp.dappnode.eth",
-  "version": "0.1.0",
-  "upstreamVersion": "v2026.4.16",
+  "version": "0.1.1",
+  "upstreamVersion": "v2026.4.23",
   "upstreamRepo": "NousResearch/hermes-agent",
   "upstreamArg": "UPSTREAM_VERSION",
   "shortDescription": "Self-improving AI agent with multi-LLM support and messaging gateway",
