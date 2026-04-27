@@ -16,8 +16,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Persistent data directory
 ENV HERMES_HOME=/opt/data
 
-# Expose API server, web UI, and web terminal ports
-EXPOSE 3000 8080 7681
+# Expose API server, web UI, setup wizard, and web terminal ports
+EXPOSE 3000 8080 8081 7681
 
 # Health check for DAppNode monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
