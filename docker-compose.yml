@@ -21,8 +21,6 @@ services:
       GATEWAY_ALLOW_ALL_USERS: "true"
     volumes:
       - hermes_data:/opt/data
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
