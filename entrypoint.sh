@@ -25,7 +25,7 @@ EOF
 fi
 
 # --- Bootstrap config files (mirrors upstream entrypoint) ---
-# Layout matches upstream docker/entrypoint.sh in v2026.4.16 (Hermes v0.10.0).
+# Layout matches upstream docker/entrypoint.sh in v2026.4.23 (Hermes v0.11.0).
 mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills,skins,plans,workspace,home}
 
 if [ ! -f "$HERMES_HOME/.env" ]; then
@@ -67,6 +67,10 @@ fi
 # --- Start background services ---
 node /opt/setup-wizard/server.cjs &
 echo "Setup wizard started on port 8080"
+
+# Start the web dashboard (serves pre-built UI from HERMES_WEB_DIST)
+hermes dashboard --port 8081 --host 0.0.0.0 --no-open --insecure &
+echo "Web dashboard started on port 8081"
 
 ttyd -p 7681 -W bash -l &
 echo "Web terminal started on port 7681"
