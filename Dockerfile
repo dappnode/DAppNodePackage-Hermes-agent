@@ -10,6 +10,9 @@ ADD --chmod=755 https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86
 # Copy setup wizard into the image
 COPY setup-wizard/ /opt/setup-wizard/
 
+# Copy DAppNode context files (seeded into HERMES_HOME on first boot)
+COPY dappnode/ /opt/dappnode/
+
 # Copy entrypoint script
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 

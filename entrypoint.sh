@@ -38,6 +38,17 @@ if [ ! -f "$HERMES_HOME/SOUL.md" ]; then
     cp "$INSTALL_DIR/docker/SOUL.md" "$HERMES_HOME/SOUL.md" 2>/dev/null || touch "$HERMES_HOME/SOUL.md"
 fi
 
+# --- DAppNode: seed context files (first boot only) ---
+if [ ! -f "$HERMES_HOME/.hermes.md" ] && [ -f /opt/dappnode/hermes.md ]; then
+    cp /opt/dappnode/hermes.md "$HERMES_HOME/.hermes.md"
+    echo "Seeded .hermes.md with DAppNode context"
+fi
+if [ ! -d "$HERMES_HOME/skills/devops/dappnode" ] && [ -d /opt/dappnode/dappnode ]; then
+    mkdir -p "$HERMES_HOME/skills/devops/dappnode"
+    cp -r /opt/dappnode/dappnode/* "$HERMES_HOME/skills/devops/dappnode/"
+    echo "Seeded DAppNode skill"
+fi
+
 # --- DAppNode: patch config.yaml for network access ---
 python3 -c "
 import yaml

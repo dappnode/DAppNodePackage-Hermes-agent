@@ -373,6 +373,7 @@
     // Provider definitions
     // =========================================================================
     const PROVIDERS = [
+      { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
       { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
       { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
@@ -496,6 +497,33 @@
     function renderProviderConfig() {
       const container = document.getElementById("provider-config");
       const p = selectedProvider;
+
+      if (p.id === "nexus") {
+        const nexusModels = [
+          { id: "qwen-3.5-27b", name: "Qwen 3.5 27B" },
+          { id: "glm-5", name: "GLM 5" },
+          { id: "deepseek-v3.2", name: "DeepSeek v3.2" },
+          { id: "minimax-m2.7", name: "MiniMax M2.7" },
+        ];
+        container.innerHTML = `
+          <h2>Configure DAppNode Nexus</h2>
+          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Get your API key &rarr;</a></div>
+          <div class="field">
+            <label>Nexus API Key</label>
+            <div class="hint">Sign up at <strong>nexus.dappnode.com</strong> and create an API key from your dashboard.</div>
+            <input type="password" id="api-key" placeholder="Paste your Nexus API key here">
+          </div>
+          <div class="field">
+            <label>Model</label>
+            <div class="hint">Select a model. All models run on private, confidential infrastructure.</div>
+            <div id="nexus-model-container"></div>
+          </div>
+        `;
+        const mc = document.getElementById("nexus-model-container");
+        mc.appendChild(createModelInput("nexus-model", nexusModels, "Select a Nexus model..."));
+        document.getElementById("nexus-model-input").value = nexusModels[0].id;
+        return;
+      }
 
       if (p.id === "ollama") {
         container.innerHTML = `
@@ -660,7 +688,7 @@
     // Build config for saving
     // =========================================================================
     function getModelValue() {
-      for (const id of ["or-model-input", "std-model-input", "ollama-model-input"]) {
+      for (const id of ["nexus-model-input", "or-model-input", "std-model-input", "ollama-model-input"]) {
         const el = document.getElementById(id);
         if (el && el.value.trim()) return el.value.trim();
       }
@@ -670,7 +698,13 @@
     function buildEnv() {
       const env = {};
       const p = selectedProvider;
-      if (p.id === "ollama") {
+      if (p.id === "nexus") {
+        const apiKey = (document.getElementById("api-key").value || "").trim();
+        if (apiKey) env.NEXUS_API_KEY = apiKey;
+        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
+        env.OPENAI_API_KEY = apiKey;
+        env.LLM_MODEL = getModelValue() || "qwen-3.5-27b";
+      } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         env.OPENAI_BASE_URL = url + "/v1";
         env.OPENAI_API_KEY = "ollama-local";
@@ -712,7 +746,11 @@
         "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
         "", "model:"
       ];
-      if (p.id === "ollama") {
+      if (p.id === "nexus") {
+        lines.push(`  default: "${getModelValue() || "qwen-3.5-27b"}"`);
+        lines.push(`  provider: "custom"`);
+        lines.push(`  base_url: "https://nexus.dappnode.com/api/v1"`);
+      } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
         lines.push(`  provider: "custom"`);
