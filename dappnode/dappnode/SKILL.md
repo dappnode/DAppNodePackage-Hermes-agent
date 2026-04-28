@@ -23,8 +23,7 @@ This Hermes Agent runs as a DAppNode package. This skill covers DAppNode-specifi
 
 By default, services are only reachable from inside the DAppNode network. To make a service publicly accessible:
 
-1. Direct the user to the DAppNode network tab:
-   `http://my.dappnode/packages/my/hermes-agent.dnp.dappnode.eth/network`
+1. Direct the user to open the DAppNode UI (`http://my.dappnode`), find the Hermes Agent package, and go to its **Network** tab.
 2. They configure:
    - **Subdomain**: a name they choose (e.g., `hermes-api`)
    - **Port**: which container port to expose (8081 for dashboard, 3000 for API, etc.)
@@ -46,8 +45,7 @@ If the user needs a publicly reachable webhook URL:
 
 ## Port Mapping to Host
 
-Users can map container ports directly to the host machine's network at:
-`http://my.dappnode/packages/my/hermes-agent.dnp.dappnode.eth/network`
+Users can map container ports directly to the host machine's network via the **Network** tab of the Hermes Agent package in the DAppNode UI (`http://my.dappnode`).
 
 This allows access from the local network without VPN — useful for LAN-only setups.
 
@@ -66,33 +64,20 @@ curl -sf http://<package-alias>.dappnode:<port>/ -o /dev/null && echo "reachable
 ```
 
 ### Using DAppNode Nexus (Recommended)
-DAppNode Nexus (`https://nexus.dappnode.com`) is DAppNode's own privacy-focused LLM gateway. It provides:
-- OpenAI-compatible API (drop-in replacement)
-- Private inference — prompts are never logged, stored, or used for training
-- Models: Qwen 3.5 27B, GLM 5, DeepSeek v3.2, MiniMax M2.7, and more
-- Pay-as-you-go credits or €20/month subscription
+DAppNode Nexus (`https://nexus.dappnode.com`) is DAppNode's own privacy-focused LLM gateway. It is OpenAI-compatible and prompts are never logged, stored, or used for training. Check the Nexus website for available models and pricing.
 
-To configure:
+To configure, use the Setup Wizard at `http://hermes-agent.dappnode:8080` and select Nexus as the provider. Or manually:
 1. Sign up at `https://nexus.dappnode.com` and create an API key
-2. Set in `.env`: `NEXUS_API_KEY=<key>`
-3. In `config.yaml`:
-```yaml
-model:
-  default: "qwen-3.5-27b"
-  provider: "custom"
-  base_url: "https://nexus-api.dappnode.com/v1"
-```
-
-Or use `hermes model` in the terminal.
+2. In the Setup Wizard or `config.yaml`, set the provider to Nexus with base URL `https://nexus-api.dappnode.com/v1`
 
 ## Troubleshooting
 
 ### Package Not Reachable
-- The target package may not be installed or may be stopped — direct the user to `http://my.dappnode/`
+- The target package may not be installed or may be stopped — direct the user to the DAppNode UI (`http://my.dappnode`) to check
 - Hermes cannot install or manage other DAppNode packages
 
 ### Configuration
-- Environment variables: editable at `http://my.dappnode/packages/my/hermes-agent.dnp.dappnode.eth/config`
+- Environment variables: editable in the **Config** tab of the Hermes Agent package in the DAppNode UI
 - Config file: `/opt/data/config.yaml`
 - API keys: `/opt/data/.env`
-- Logs: viewable at `http://my.dappnode/packages/my/hermes-agent.dnp.dappnode.eth/logs`
+- Logs: viewable in the **Logs** tab of the Hermes Agent package in the DAppNode UI

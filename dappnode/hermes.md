@@ -19,8 +19,7 @@ These services are important, dont kill them.
 
 ## DAppNode Admin
 
-The user manages this package (environment variables, port mappings, logs, HTTPS exposure) at:
-http://my.dappnode/packages/my/hermes-agent.dnp.dappnode.eth/info
+The user manages this package (environment variables, port mappings, logs, HTTPS exposure) via the DAppNode UI at `http://my.dappnode` — find the Hermes Agent package and use the Config, Network, and Logs tabs.
 
 ## External Access
 

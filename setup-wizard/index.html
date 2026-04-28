@@ -97,6 +97,21 @@
       margin-top: 6px; background: rgba(255,215,0,0.15); color: var(--primary);
     }
     .card .card-tag.free { background: rgba(52,211,153,0.15); color: var(--success); }
+    .card.featured {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02));
+      border-color: var(--primary);
+      position: relative;
+      padding: 1.25rem 1.25rem 1.25rem 1.25rem;
+    }
+    .card.featured:hover { background: linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,215,0,0.04)); }
+    .card.featured.selected { background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06)); }
+    .card.featured .card-title { font-size: 1.1rem; margin-bottom: 6px; }
+    .card.featured .card-desc { font-size: 0.9rem; }
+    .card.featured .card-tag {
+      position: absolute; top: 10px; right: 12px; margin-top: 0;
+      background: var(--primary); color: #1a1a1a; font-weight: 600;
+    }
     .field { margin-bottom: 1.25rem; }
     .field label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 6px; }
     .field .hint { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; line-height: 1.4; }
@@ -248,9 +263,17 @@
           <input type="text" id="telegram-users" placeholder="123456789,987654321">
         </div>
         <div class="field">
-          <label>Discord Bot Token <span class="optional-badge">optional</span></label>
-          <div class="hint">From the Discord Developer Portal.</div>
-          <input type="text" id="discord-token" placeholder="MTIz...">
+          <label>WhatsApp <span class="optional-badge">optional</span></label>
+          <div class="hint">Connects via the built-in Baileys bridge. Enabling here flips the switch — you must then open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a mode and pair via QR code.</div>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+            <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
+            Enable WhatsApp
+          </label>
+        </div>
+        <div class="field" id="whatsapp-users-field" style="display:none">
+          <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
+          <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to allow anyone (not recommended).</div>
+          <input type="text" id="whatsapp-users" placeholder="15551234567,447700900123">
         </div>
         <div class="actions">
           <button class="btn btn-secondary" onclick="goTo(1)">Back</button>
@@ -407,7 +430,9 @@
     const cardsEl = document.getElementById("provider-cards");
     PROVIDERS.forEach(p => {
       const card = document.createElement("div");
-      card.className = "card"; card.dataset.id = p.id;
+      const featured = p.id === "nexus";
+      card.className = "card" + (featured ? " featured" : "");
+      card.dataset.id = p.id;
       card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div><span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>`;
       card.onclick = () => selectProviderCard(p.id);
       cardsEl.appendChild(card);
@@ -423,6 +448,9 @@
 
     document.getElementById("telegram-token").addEventListener("input", (e) => {
       document.getElementById("telegram-users-field").style.display = e.target.value.trim() ? "block" : "none";
+    });
+    document.getElementById("whatsapp-enabled").addEventListener("change", (e) => {
+      document.getElementById("whatsapp-users-field").style.display = e.target.checked ? "block" : "none";
     });
 
     // =========================================================================
@@ -734,8 +762,11 @@
         const tgUsers = (document.getElementById("telegram-users").value || "").trim();
         if (tgUsers) env.TELEGRAM_ALLOWED_USERS = tgUsers;
       }
-      const dcToken = (document.getElementById("discord-token").value || "").trim();
-      if (dcToken) env.DISCORD_BOT_TOKEN = dcToken;
+      if (document.getElementById("whatsapp-enabled").checked) {
+        env.WHATSAPP_ENABLED = "true";
+        const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
+        if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
+      }
       return env;
     }
 
@@ -749,7 +780,7 @@
       if (p.id === "nexus") {
         lines.push(`  default: "${getModelValue() || "qwen-3.5-27b"}"`);
         lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "https://nexus.dappnode.com/api/v1"`);
+        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
