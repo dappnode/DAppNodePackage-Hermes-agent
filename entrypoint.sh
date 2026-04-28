@@ -6,11 +6,14 @@ set -e
 HERMES_HOME="${HERMES_HOME:-/opt/data}"
 INSTALL_DIR="/opt/hermes"
 
-# --- Privilege dropping via gosu (matches upstream) ---
-if [ "$(id -u)" = "0" ]; then
-    # Write profile.d snippet while we still have root (ttyd login shells need it)
-    if [ -d /etc/profile.d ] && [ ! -f /etc/profile.d/hermes-venv.sh ]; then
-        cat > /etc/profile.d/hermes-venv.sh <<'PROFILE'
+# --- Activate virtualenv ---
+source "${INSTALL_DIR}/.venv/bin/activate"
+
+# Make `hermes` discoverable inside the ttyd web terminal.
+# ttyd spawns `bash -l`, which resets PATH. Drop a profile.d snippet so
+# login shells re-add the venv and start in HERMES_HOME.
+if [ -d /etc/profile.d ] && [ ! -f /etc/profile.d/hermes-venv.sh ]; then
+    cat > /etc/profile.d/hermes-venv.sh <<'PROFILE'
 # DAppNode Hermes Agent: expose venv + HERMES_HOME to login shells (ttyd)
 if [ -d "/opt/hermes/.venv/bin" ]; then
     export PATH="/opt/hermes/.venv/bin:$PATH"
@@ -19,22 +22,11 @@ fi
 export HERMES_HOME="${HERMES_HOME:-/opt/data}"
 cd "$HERMES_HOME"
 PROFILE
-        chmod 0644 /etc/profile.d/hermes-venv.sh
-    fi
-
-    actual_hermes_uid=$(id -u hermes)
-    if [ "$(stat -c %u "$HERMES_HOME" 2>/dev/null)" != "$actual_hermes_uid" ]; then
-        echo "$HERMES_HOME is not owned by $actual_hermes_uid, fixing"
-        chown -R hermes:hermes "$HERMES_HOME" 2>/dev/null || \
-            echo "Warning: chown failed — continuing anyway"
-    fi
-
-    echo "Dropping root privileges"
-    exec gosu hermes "$0" "$@"
+    chmod 0644 /etc/profile.d/hermes-venv.sh
 fi
 
-# --- Running as hermes from here ---
-source "${INSTALL_DIR}/.venv/bin/activate"
+# Clean stale runtime files from previous container runs
+rm -f "$HERMES_HOME"/gateway.lock "$HERMES_HOME"/gateway.pid
 
 # --- Bootstrap config files (mirrors upstream entrypoint) ---
 mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills,skins,plans,workspace,home}
@@ -44,12 +36,6 @@ if [ ! -f "$HERMES_HOME/.env" ]; then
 fi
 if [ ! -f "$HERMES_HOME/config.yaml" ]; then
     cp "$INSTALL_DIR/cli-config.yaml.example" "$HERMES_HOME/config.yaml"
-fi
-
-# Ensure config.yaml is accessible to hermes user (matches upstream)
-if [ -f "$HERMES_HOME/config.yaml" ]; then
-    chown hermes:hermes "$HERMES_HOME/config.yaml" 2>/dev/null || true
-    chmod 640 "$HERMES_HOME/config.yaml" 2>/dev/null || true
 fi
 
 if [ ! -f "$HERMES_HOME/SOUL.md" ]; then
