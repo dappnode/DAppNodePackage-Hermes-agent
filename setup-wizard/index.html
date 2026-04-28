@@ -206,10 +206,6 @@
           Web Terminal
           <small>Run hermes CLI commands — hermes model, hermes doctor, hermes config, etc.</small>
         </a>
-        <a href="http://hermes-agent.dappnode:3000/v1/models" target="_blank">
-          API Server — /v1/models
-          <small>OpenAI-compatible API endpoint for frontends like Open WebUI or LobeChat</small>
-        </a>
         <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
           Health Check
           <small>Verify the API server is running</small>
@@ -264,11 +260,15 @@
         </div>
         <div class="field">
           <label>WhatsApp <span class="optional-badge">optional</span></label>
-          <div class="hint">Connects via the built-in Baileys bridge. Enabling here flips the switch — you must then open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a mode and pair via QR code.</div>
+          <div class="hint">Connects via the built-in Baileys bridge.</div>
           <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
             <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
             Enable WhatsApp
           </label>
+          <div id="whatsapp-pair-notice" style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
+            <strong style="color:var(--primary);">→ Pairing required</strong><br>
+            After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a mode and pair via QR code. You will need to manually restart the package after pairing to apply the changes. <br><br>
+          </div>
         </div>
         <div class="field" id="whatsapp-users-field" style="display:none">
           <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
@@ -299,9 +299,6 @@
       <div class="step" data-step="4">
         <div class="success-icon">&#10003;</div>
         <h2 style="text-align:center">Configuration Saved!</h2>
-        <div class="subtitle" style="text-align:center">
-          The gateway will pick up the new configuration. You may need to restart the package from the DAppNode UI.
-        </div>
         <div class="quick-links">
           <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
             Open Terminal
@@ -355,28 +352,43 @@
           frame.src = location.protocol + "//" + location.hostname + ":7681";
         }
       }
-      if (name === "dashboard") refreshDashboard();
+      if (name === "dashboard") {
+        refreshDashboard();
+      } else {
+        // Stop polling when leaving dashboard
+        if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
+      }
     }
 
     // =========================================================================
     // Dashboard
     // =========================================================================
+    let _dashboardPollTimer = null;
+
     async function refreshDashboard() {
       try {
         const resp = await fetch("/api/health");
         const data = await resp.json();
         const apiEl = document.getElementById("st-api");
         const healthEl = document.getElementById("st-health");
+        // Hermes returns status:"connected" (not "ok") when fully up
+        const healthy = data.status === "ok" || data.status === "connected";
         if (data.apiServer) {
           apiEl.textContent = "Running"; apiEl.className = "value ok";
-          healthEl.textContent = data.status === "ok" ? "Healthy" : "Degraded";
-          healthEl.className = "value " + (data.status === "ok" ? "ok" : "warn");
+          healthEl.textContent = healthy ? "Healthy" : "Degraded";
+          healthEl.className = "value " + (healthy ? "ok" : "warn");
+          // API is up — stop polling
+          if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
         } else {
-          apiEl.textContent = "Not reachable"; apiEl.className = "value err";
+          apiEl.textContent = "Starting…"; apiEl.className = "value warn";
           healthEl.textContent = "—"; healthEl.className = "value";
+          // API not yet up — start polling every 8s until it is
+          if (!_dashboardPollTimer) {
+            _dashboardPollTimer = setInterval(refreshDashboard, 8000);
+          }
         }
       } catch {
-        document.getElementById("st-api").textContent = "Error";
+        document.getElementById("st-api").textContent = "Not reachable";
         document.getElementById("st-api").className = "value err";
       }
       try {
@@ -451,6 +463,7 @@
     });
     document.getElementById("whatsapp-enabled").addEventListener("change", (e) => {
       document.getElementById("whatsapp-users-field").style.display = e.target.checked ? "block" : "none";
+      document.getElementById("whatsapp-pair-notice").style.display = e.target.checked ? "block" : "none";
     });
 
     // =========================================================================
@@ -467,6 +480,11 @@
         else if (i === step) bar.classList.add("active");
       });
       if (step === 1 && selectedProvider) renderProviderConfig();
+      // Reset save button if returning to review step
+      if (step === 3) {
+        const btn = document.getElementById("btn-save");
+        if (btn) { btn.disabled = false; btn.textContent = "Save Configuration"; }
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -527,15 +545,9 @@
       const p = selectedProvider;
 
       if (p.id === "nexus") {
-        const nexusModels = [
-          { id: "qwen-3.5-27b", name: "Qwen 3.5 27B" },
-          { id: "glm-5", name: "GLM 5" },
-          { id: "deepseek-v3.2", name: "DeepSeek v3.2" },
-          { id: "minimax-m2.7", name: "MiniMax M2.7" },
-        ];
         container.innerHTML = `
           <h2>Configure DAppNode Nexus</h2>
-          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Get your API key &rarr;</a></div>
+          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Sign up &amp; get your API key &rarr;</a></div>
           <div class="field">
             <label>Nexus API Key</label>
             <div class="hint">Sign up at <strong>nexus.dappnode.com</strong> and create an API key from your dashboard.</div>
@@ -543,13 +555,10 @@
           </div>
           <div class="field">
             <label>Model</label>
-            <div class="hint">Select a model. All models run on private, confidential infrastructure.</div>
-            <div id="nexus-model-container"></div>
+            <div class="hint">Browse the available models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a> and paste the full <code>provider/model</code> ID below.</div>
+            <input type="text" id="nexus-model-input" placeholder="e.g. minimax/minimax-m2.7">
           </div>
         `;
-        const mc = document.getElementById("nexus-model-container");
-        mc.appendChild(createModelInput("nexus-model", nexusModels, "Select a Nexus model..."));
-        document.getElementById("nexus-model-input").value = nexusModels[0].id;
         return;
       }
 
@@ -731,7 +740,7 @@
         if (apiKey) env.NEXUS_API_KEY = apiKey;
         env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
         env.OPENAI_API_KEY = apiKey;
-        env.LLM_MODEL = getModelValue() || "qwen-3.5-27b";
+        env.LLM_MODEL = getModelValue() || "minimax/minimax-m2.7";
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         env.OPENAI_BASE_URL = url + "/v1";
@@ -778,7 +787,7 @@
         "", "model:"
       ];
       if (p.id === "nexus") {
-        lines.push(`  default: "${getModelValue() || "qwen-3.5-27b"}"`);
+        lines.push(`  default: "${getModelValue() || "minimax/minimax-m2.7"}"`);
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
       } else if (p.id === "ollama") {
@@ -832,14 +841,20 @@
     async function saveConfig() {
       const btn = document.getElementById("btn-save");
       btn.disabled = true; btn.textContent = "Saving...";
+      const env = buildEnv();
+      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED);
       try {
         const resp = await fetch("/api/config", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ env: buildEnv(), configYaml: buildConfigYaml() })
+          body: JSON.stringify({ env, configYaml: buildConfigYaml() })
         });
-        if (resp.ok) { goTo(4); }
-        else {
+        if (resp.ok) {
+          goTo(4);
+          if (needsRestart) {
+            setTimeout(() => fetch("/api/restart", { method: "POST" }).catch(() => {}), 500);
+          }
+        } else {
           const data = await resp.json();
           alert("Failed: " + (data.error || "Unknown error"));
           btn.disabled = false; btn.textContent = "Save Configuration";
