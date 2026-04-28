@@ -97,6 +97,21 @@
       margin-top: 6px; background: rgba(255,215,0,0.15); color: var(--primary);
     }
     .card .card-tag.free { background: rgba(52,211,153,0.15); color: var(--success); }
+    .card.featured {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02));
+      border-color: var(--primary);
+      position: relative;
+      padding: 1.25rem 1.25rem 1.25rem 1.25rem;
+    }
+    .card.featured:hover { background: linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,215,0,0.04)); }
+    .card.featured.selected { background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06)); }
+    .card.featured .card-title { font-size: 1.1rem; margin-bottom: 6px; }
+    .card.featured .card-desc { font-size: 0.9rem; }
+    .card.featured .card-tag {
+      position: absolute; top: 10px; right: 12px; margin-top: 0;
+      background: var(--primary); color: #1a1a1a; font-weight: 600;
+    }
     .field { margin-bottom: 1.25rem; }
     .field label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 6px; }
     .field .hint { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; line-height: 1.4; }
@@ -191,10 +206,6 @@
           Web Terminal
           <small>Run hermes CLI commands — hermes model, hermes doctor, hermes config, etc.</small>
         </a>
-        <a href="http://hermes-agent.dappnode:3000/v1/models" target="_blank">
-          API Server — /v1/models
-          <small>OpenAI-compatible API endpoint for frontends like Open WebUI or LobeChat</small>
-        </a>
         <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
           Health Check
           <small>Verify the API server is running</small>
@@ -248,9 +259,21 @@
           <input type="text" id="telegram-users" placeholder="123456789,987654321">
         </div>
         <div class="field">
-          <label>Discord Bot Token <span class="optional-badge">optional</span></label>
-          <div class="hint">From the Discord Developer Portal.</div>
-          <input type="text" id="discord-token" placeholder="MTIz...">
+          <label>WhatsApp <span class="optional-badge">optional</span></label>
+          <div class="hint">Connects via the built-in Baileys bridge.</div>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+            <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
+            Enable WhatsApp
+          </label>
+          <div id="whatsapp-pair-notice" style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
+            <strong style="color:var(--primary);">→ Pairing required</strong><br>
+            After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a mode and pair via QR code. You will need to manually restart the package after pairing to apply the changes. <br><br>
+          </div>
+        </div>
+        <div class="field" id="whatsapp-users-field" style="display:none">
+          <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
+          <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to allow anyone (not recommended).</div>
+          <input type="text" id="whatsapp-users" placeholder="15551234567,447700900123">
         </div>
         <div class="actions">
           <button class="btn btn-secondary" onclick="goTo(1)">Back</button>
@@ -276,9 +299,6 @@
       <div class="step" data-step="4">
         <div class="success-icon">&#10003;</div>
         <h2 style="text-align:center">Configuration Saved!</h2>
-        <div class="subtitle" style="text-align:center">
-          The gateway will pick up the new configuration. You may need to restart the package from the DAppNode UI.
-        </div>
         <div class="quick-links">
           <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
             Open Terminal
@@ -332,28 +352,43 @@
           frame.src = location.protocol + "//" + location.hostname + ":7681";
         }
       }
-      if (name === "dashboard") refreshDashboard();
+      if (name === "dashboard") {
+        refreshDashboard();
+      } else {
+        // Stop polling when leaving dashboard
+        if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
+      }
     }
 
     // =========================================================================
     // Dashboard
     // =========================================================================
+    let _dashboardPollTimer = null;
+
     async function refreshDashboard() {
       try {
         const resp = await fetch("/api/health");
         const data = await resp.json();
         const apiEl = document.getElementById("st-api");
         const healthEl = document.getElementById("st-health");
+        // Hermes returns status:"connected" (not "ok") when fully up
+        const healthy = data.status === "ok" || data.status === "connected";
         if (data.apiServer) {
           apiEl.textContent = "Running"; apiEl.className = "value ok";
-          healthEl.textContent = data.status === "ok" ? "Healthy" : "Degraded";
-          healthEl.className = "value " + (data.status === "ok" ? "ok" : "warn");
+          healthEl.textContent = healthy ? "Healthy" : "Degraded";
+          healthEl.className = "value " + (healthy ? "ok" : "warn");
+          // API is up — stop polling
+          if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
         } else {
-          apiEl.textContent = "Not reachable"; apiEl.className = "value err";
+          apiEl.textContent = "Starting…"; apiEl.className = "value warn";
           healthEl.textContent = "—"; healthEl.className = "value";
+          // API not yet up — start polling every 8s until it is
+          if (!_dashboardPollTimer) {
+            _dashboardPollTimer = setInterval(refreshDashboard, 8000);
+          }
         }
       } catch {
-        document.getElementById("st-api").textContent = "Error";
+        document.getElementById("st-api").textContent = "Not reachable";
         document.getElementById("st-api").className = "value err";
       }
       try {
@@ -373,6 +408,7 @@
     // Provider definitions
     // =========================================================================
     const PROVIDERS = [
+      { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
       { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
       { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
@@ -406,7 +442,9 @@
     const cardsEl = document.getElementById("provider-cards");
     PROVIDERS.forEach(p => {
       const card = document.createElement("div");
-      card.className = "card"; card.dataset.id = p.id;
+      const featured = p.id === "nexus";
+      card.className = "card" + (featured ? " featured" : "");
+      card.dataset.id = p.id;
       card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div><span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>`;
       card.onclick = () => selectProviderCard(p.id);
       cardsEl.appendChild(card);
@@ -423,6 +461,10 @@
     document.getElementById("telegram-token").addEventListener("input", (e) => {
       document.getElementById("telegram-users-field").style.display = e.target.value.trim() ? "block" : "none";
     });
+    document.getElementById("whatsapp-enabled").addEventListener("change", (e) => {
+      document.getElementById("whatsapp-users-field").style.display = e.target.checked ? "block" : "none";
+      document.getElementById("whatsapp-pair-notice").style.display = e.target.checked ? "block" : "none";
+    });
 
     // =========================================================================
     // Wizard navigation
@@ -438,6 +480,11 @@
         else if (i === step) bar.classList.add("active");
       });
       if (step === 1 && selectedProvider) renderProviderConfig();
+      // Reset save button if returning to review step
+      if (step === 3) {
+        const btn = document.getElementById("btn-save");
+        if (btn) { btn.disabled = false; btn.textContent = "Save Configuration"; }
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -496,6 +543,24 @@
     function renderProviderConfig() {
       const container = document.getElementById("provider-config");
       const p = selectedProvider;
+
+      if (p.id === "nexus") {
+        container.innerHTML = `
+          <h2>Configure DAppNode Nexus</h2>
+          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Sign up &amp; get your API key &rarr;</a></div>
+          <div class="field">
+            <label>Nexus API Key</label>
+            <div class="hint">Sign up at <strong>nexus.dappnode.com</strong> and create an API key from your dashboard.</div>
+            <input type="password" id="api-key" placeholder="Paste your Nexus API key here">
+          </div>
+          <div class="field">
+            <label>Model</label>
+            <div class="hint">Browse the available models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a> and paste the full <code>provider/model</code> ID below.</div>
+            <input type="text" id="nexus-model-input" placeholder="e.g. minimax/minimax-m2.7">
+          </div>
+        `;
+        return;
+      }
 
       if (p.id === "ollama") {
         container.innerHTML = `
@@ -660,7 +725,7 @@
     // Build config for saving
     // =========================================================================
     function getModelValue() {
-      for (const id of ["or-model-input", "std-model-input", "ollama-model-input"]) {
+      for (const id of ["nexus-model-input", "or-model-input", "std-model-input", "ollama-model-input"]) {
         const el = document.getElementById(id);
         if (el && el.value.trim()) return el.value.trim();
       }
@@ -670,7 +735,13 @@
     function buildEnv() {
       const env = {};
       const p = selectedProvider;
-      if (p.id === "ollama") {
+      if (p.id === "nexus") {
+        const apiKey = (document.getElementById("api-key").value || "").trim();
+        if (apiKey) env.NEXUS_API_KEY = apiKey;
+        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
+        env.OPENAI_API_KEY = apiKey;
+        env.LLM_MODEL = getModelValue() || "minimax/minimax-m2.7";
+      } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         env.OPENAI_BASE_URL = url + "/v1";
         env.OPENAI_API_KEY = "ollama-local";
@@ -700,8 +771,11 @@
         const tgUsers = (document.getElementById("telegram-users").value || "").trim();
         if (tgUsers) env.TELEGRAM_ALLOWED_USERS = tgUsers;
       }
-      const dcToken = (document.getElementById("discord-token").value || "").trim();
-      if (dcToken) env.DISCORD_BOT_TOKEN = dcToken;
+      if (document.getElementById("whatsapp-enabled").checked) {
+        env.WHATSAPP_ENABLED = "true";
+        const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
+        if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
+      }
       return env;
     }
 
@@ -712,7 +786,11 @@
         "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
         "", "model:"
       ];
-      if (p.id === "ollama") {
+      if (p.id === "nexus") {
+        lines.push(`  default: "${getModelValue() || "minimax/minimax-m2.7"}"`);
+        lines.push(`  provider: "custom"`);
+        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+      } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
         lines.push(`  provider: "custom"`);
@@ -763,14 +841,20 @@
     async function saveConfig() {
       const btn = document.getElementById("btn-save");
       btn.disabled = true; btn.textContent = "Saving...";
+      const env = buildEnv();
+      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED);
       try {
         const resp = await fetch("/api/config", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ env: buildEnv(), configYaml: buildConfigYaml() })
+          body: JSON.stringify({ env, configYaml: buildConfigYaml() })
         });
-        if (resp.ok) { goTo(4); }
-        else {
+        if (resp.ok) {
+          goTo(4);
+          if (needsRestart) {
+            setTimeout(() => fetch("/api/restart", { method: "POST" }).catch(() => {}), 500);
+          }
+        } else {
           const data = await resp.json();
           alert("Failed: " + (data.error || "Unknown error"));
           btn.disabled = false; btn.textContent = "Save Configuration";

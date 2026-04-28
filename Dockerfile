@@ -7,8 +7,14 @@ USER root
 # Install ttyd for web terminal (static binary from GitHub releases)
 ADD --chmod=755 https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 /usr/local/bin/ttyd
 
+# Pre-install WhatsApp bridge dependencies (upstream ships the script but not node_modules)
+RUN cd /opt/hermes/scripts/whatsapp-bridge && npm install --omit=dev --no-audit --no-fund
+
 # Copy setup wizard into the image
 COPY setup-wizard/ /opt/setup-wizard/
+
+# Copy DAppNode context files (seeded into HERMES_HOME on first boot)
+COPY dappnode/ /opt/dappnode/
 
 # Copy entrypoint script
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -24,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["hermes", "gateway", "run"]
+CMD ["gateway", "run"]

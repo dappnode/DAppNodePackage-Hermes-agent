@@ -208,6 +208,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Restart the package (kills PID 1 — Docker restart policy brings it back)
+  if (req.method === "POST" && url.pathname === "/api/restart") {
+    json(res, 200, { ok: true, message: "Restart triggered. Container will be back in ~5–10 seconds." });
+    // Defer the kill so the response is flushed first
+    setTimeout(() => {
+      try {
+        // Kill PID 1 (the hermes gateway) — docker-compose restart policy will recreate the container
+        process.kill(1, "SIGTERM");
+      } catch (e) {
+        console.error("Failed to kill PID 1:", e.message);
+        // Fallback: kill ourselves so at least the wizard process restarts (won't pick up new env though)
+        try { process.exit(0); } catch {}
+      }
+    }, 250);
+    return;
+  }
+
   // Fetch OpenRouter models (public API, cached)
   if (req.method === "GET" && url.pathname === "/api/models/openrouter") {
     const models = await fetchOpenRouterModels();
