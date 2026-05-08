@@ -816,6 +816,7 @@
       lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
       lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
       lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
+      lines.push("", "# Platform settings (DAppNode)", "platforms:", "  whatsapp:", "    extra:", "      bridge_port: 3010");
       lines.push("", "terminal:", '  backend: "local"', '  cwd: "."', "  timeout: 180");
       lines.push("", "agent:", "  max_turns: 60", '  reasoning_effort: "medium"');
       lines.push("", "memory:", "  memory_enabled: true", "  user_profile_enabled: true");

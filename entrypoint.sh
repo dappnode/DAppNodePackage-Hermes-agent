@@ -132,9 +132,16 @@ cui.setdefault('allowInsecureAuth', True)
 cui.setdefault('dangerouslyDisableDeviceAuth', True)
 term = config.setdefault('terminal', {})
 term['cwd'] = '$HERMES_HOME'
+platforms = config.setdefault('platforms', {})
+if isinstance(platforms, dict):
+    whatsapp = platforms.setdefault('whatsapp', {})
+    if isinstance(whatsapp, dict):
+        extra = whatsapp.setdefault('extra', {})
+        if isinstance(extra, dict) and extra.get('bridge_port') in (None, 3000, '3000'):
+            extra['bridge_port'] = 3010
 with open(config_path, 'w') as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-print('Patched config.yaml for DAppNode (port=3000, bind=lan)')
+print('Patched config.yaml for DAppNode (api_port=3000, whatsapp_bridge_port=3010)')
 " || echo "Warning: Could not patch config.yaml, continuing with defaults"
 
 # --- Sync bundled skills (matches upstream — no || true) ---
