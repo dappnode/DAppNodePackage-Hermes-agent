@@ -27,6 +27,22 @@ PROFILE
     chmod 0644 /etc/profile.d/hermes-venv.sh
 }
 
+# Drop root privileges using the mechanism bundled by the upstream Hermes image.
+# Recent upstream images removed gosu and use s6-overlay's s6-setuidgid instead.
+drop_to_hermes() {
+    if command -v s6-setuidgid >/dev/null 2>&1; then
+        exec env HOME="$HERMES_HOME/home" USER=hermes LOGNAME=hermes s6-setuidgid hermes "$0" "$@"
+    fi
+
+    if [ -x /command/s6-setuidgid ]; then
+        exec env HOME="$HERMES_HOME/home" USER=hermes LOGNAME=hermes /command/s6-setuidgid hermes "$0" "$@"
+    fi
+
+    echo "Error: s6-setuidgid not found; cannot drop root privileges." >&2
+    echo "The upstream Hermes image should provide s6-setuidgid via s6-overlay." >&2
+    exit 127
+}
+
 # --- Root preflight and privilege drop ---
 # Upstream Hermes starts the official image as root only long enough to repair
 # the mounted data volume and then re-enters as the non-root `hermes` user.
@@ -67,7 +83,7 @@ if [ "$(id -u)" = "0" ]; then
     fi
 
     echo "Dropping root privileges"
-    exec env HOME="$HERMES_HOME/home" USER=hermes LOGNAME=hermes gosu hermes "$0" "$@"
+    drop_to_hermes "$@"
 fi
 
 # If this script is PID 1 after the privilege drop, insert tini while still
