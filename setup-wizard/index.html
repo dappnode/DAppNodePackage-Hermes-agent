@@ -736,11 +736,14 @@
       const env = {};
       const p = selectedProvider;
       if (p.id === "nexus") {
+        // Nexus is registered as a named provider in config.yaml (see
+        // buildConfigYaml). Hermes resolves its key from NEXUS_API_KEY via
+        // the provider's key_env. We must NOT reuse OPENAI_API_KEY/
+        // OPENAI_BASE_URL: recent Hermes no longer reads OPENAI_BASE_URL and
+        // host-gates OPENAI_API_KEY to openai.com, which silently drops the
+        // key for the nexus-api.dappnode.com host.
         const apiKey = (document.getElementById("api-key").value || "").trim();
         if (apiKey) env.NEXUS_API_KEY = apiKey;
-        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
-        env.OPENAI_API_KEY = apiKey;
-        env.LLM_MODEL = getModelValue() || "minimax/minimax-m2.7";
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         env.OPENAI_BASE_URL = url + "/v1";
@@ -752,10 +755,11 @@
         const model = (document.getElementById("custom-model-name").value || "").trim();
         if (spec === "anthropic") {
           if (apiKey) env.ANTHROPIC_API_KEY = apiKey;
-          if (model) env.LLM_MODEL = "anthropic/" + model;
         } else {
-          if (apiKey) env.OPENAI_API_KEY = apiKey;
-          if (model) env.LLM_MODEL = model;
+          // OpenAI-compatible custom endpoint: registered as a named provider
+          // in config.yaml with key_env CUSTOM_API_KEY. Don't use
+          // OPENAI_API_KEY — newer Hermes only sends it to openai.com hosts.
+          if (apiKey) env.CUSTOM_API_KEY = apiKey;
         }
       } else {
         const apiKey = (document.getElementById("api-key").value || "").trim();
@@ -786,10 +790,25 @@
         "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
         "", "model:"
       ];
+      // Optional top-level `providers:` mapping for OpenAI-compatible endpoints
+      // that need an API key. Recent Hermes resolves the key from the env var
+      // named in `key_env` and no longer reads OPENAI_BASE_URL / non-openai.com
+      // OPENAI_API_KEY, so a named provider entry is required for hosts like
+      // Nexus or arbitrary custom endpoints.
+      const providersBlock = [];
       if (p.id === "nexus") {
-        lines.push(`  default: "${getModelValue() || "minimax/minimax-m2.7"}"`);
-        lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+        const model = getModelValue() || "minimax/minimax-m2.7";
+        lines.push(`  default: "${model}"`);
+        lines.push(`  provider: "nexus"`);
+        providersBlock.push(
+          "", "# Named provider: DAppNode Nexus (key resolved from NEXUS_API_KEY)",
+          "providers:", "  nexus:",
+          `    name: "DAppNode Nexus"`,
+          `    base_url: "https://nexus-api.dappnode.com/v1"`,
+          `    key_env: "NEXUS_API_KEY"`,
+          `    default_model: "${model}"`,
+          `    api_mode: "chat_completions"`
+        );
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
@@ -802,17 +821,30 @@
         if (spec === "anthropic") {
           lines.push(`  default: "anthropic/${model || "claude-3-opus-20240229"}"`);
           lines.push(`  provider: "anthropic"`);
+          if (baseUrl) lines.push(`  base_url: "${baseUrl}"`);
         } else {
-          lines.push(`  default: "${model || "gpt-4"}"`);
-          lines.push(`  provider: "custom"`);
+          // OpenAI-compatible custom endpoint → named provider so the API key
+          // (CUSTOM_API_KEY) is sent to the configured host.
+          const modelName = model || "gpt-4";
+          lines.push(`  default: "${modelName}"`);
+          lines.push(`  provider: "custom-endpoint"`);
+          providersBlock.push(
+            "", "# Named provider: custom OpenAI-compatible endpoint",
+            "providers:", "  custom-endpoint:",
+            `    name: "Custom Endpoint"`,
+            `    base_url: "${baseUrl}"`,
+            `    key_env: "CUSTOM_API_KEY"`,
+            `    default_model: "${modelName}"`,
+            `    api_mode: "${spec === "openai-responses" ? "codex_responses" : "chat_completions"}"`
+          );
         }
-        if (baseUrl) lines.push(`  base_url: "${baseUrl}"`);
       } else {
         const model = getModelValue();
         if (model) lines.push(`  default: "${p.id === "openrouter" ? model : p.id + "/" + model}"`);
         lines.push(`  provider: "${p.provider}"`);
         if (p.id === "openrouter") lines.push(`  base_url: "https://openrouter.ai/api/v1"`);
       }
+      lines.push(...providersBlock);
       lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
       lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
       lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
