@@ -129,6 +129,11 @@ if [ ! -d "$HERMES_HOME/skills/devops/dappnode" ] && [ -d /opt/dappnode/dappnode
     cp -r /opt/dappnode/dappnode/* "$HERMES_HOME/skills/devops/dappnode/"
     echo "Seeded DAppNode skill"
 fi
+if [ ! -d "$HERMES_HOME/skills/devops/dappnode-nexus" ] && [ -d /opt/dappnode/dappnode-nexus ]; then
+    mkdir -p "$HERMES_HOME/skills/devops/dappnode-nexus"
+    cp -r /opt/dappnode/dappnode-nexus/* "$HERMES_HOME/skills/devops/dappnode-nexus/"
+    echo "Seeded DAppNode Nexus skill"
+fi
 
 # --- DAppNode: patch config.yaml for network access ---
 python3 -c "
@@ -158,6 +163,22 @@ if isinstance(platforms, dict):
 with open(config_path, 'w') as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 print('Patched config.yaml for DAppNode (api_port=3000, whatsapp_bridge_port=3010)')
+
+# --- Nexus context length fix ---
+# nexus-api.dappnode.com is not in Hermes' URL-to-provider map, so the agent
+# cannot auto-detect model context length and falls back to 256K. Pre-set a
+# sensible default unless the user has already configured it explicitly.
+model_section = config.get('model', {})
+provider = model_section.get('provider', '')
+base_url = model_section.get('base_url', '')
+ctx_set = model_section.get('context_length') is not None
+if not ctx_set and provider == 'custom' and 'nexus-api.dappnode.com' in str(base_url):
+    model_section['context_length'] = 1000000
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    print('Nexus detected: set model.context_length=1000000 to avoid 256K fallback')
+elif ctx_set and provider == 'custom' and 'nexus-api.dappnode.com' in str(base_url):
+    print(f'Nexus detected: context_length already set to {config[\"model\"][\"context_length\"]}, leaving as-is')
 " || echo "Warning: Could not patch config.yaml, continuing with defaults"
 
 # --- Sync bundled skills (matches upstream — no || true) ---

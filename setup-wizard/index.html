@@ -423,6 +423,17 @@
 
     // Suggested models per provider (shown as autocomplete hints — user can type anything)
     const SUGGESTED_MODELS = {
+      nexus: [
+        { id: "deepseek/deepseek-v4-pro", name: "DeepSeek V4 Pro", context_length: 1000000 },
+        { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash", context_length: 1000000 },
+        { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1", context_length: 1000000 },
+        { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", context_length: 200000 },
+        { id: "anthropic/claude-opus-4", name: "Claude Opus 4", context_length: 200000 },
+        { id: "openai/gpt-5.4", name: "GPT-5.4", context_length: 1050000 },
+        { id: "openai/gpt-5", name: "GPT-5", context_length: 400000 },
+        { id: "minimax/minimax-m2.7", name: "MiniMax M2.7", context_length: 1000000 },
+        { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", context_length: 2000000 },
+      ],
       openai: ["gpt-4.1", "gpt-4.1-mini", "gpt-5.2", "o4-mini", "o3", "gpt-4o"],
       anthropic: ["claude-sonnet-4-5-20250929", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
       google: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
@@ -555,10 +566,20 @@
           </div>
           <div class="field">
             <label>Model</label>
-            <div class="hint">Browse the available models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a> and paste the full <code>provider/model</code> ID below.</div>
-            <input type="text" id="nexus-model-input" placeholder="e.g. minimax/minimax-m2.7">
+            <div class="hint">Select a suggested model or type any model ID supported by Nexus. Browse all models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
+            <div id="nexus-model-container"></div>
           </div>
         `;
+        const mc = document.getElementById("nexus-model-container");
+        const suggestions = SUGGESTED_MODELS.nexus || [];
+        mc.appendChild(createModelInput("nexus-model", suggestions, "e.g. deepseek/deepseek-v4-pro"));
+        // Pre-select DeepSeek V4 Pro as a sensible default
+        if (suggestions.length) {
+          setTimeout(() => {
+            const inp = document.getElementById("nexus-model-input");
+            if (inp) inp.value = suggestions[0].id;
+          }, 0);
+        }
         return;
       }
 
@@ -740,7 +761,7 @@
         if (apiKey) env.NEXUS_API_KEY = apiKey;
         env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
         env.OPENAI_API_KEY = apiKey;
-        env.LLM_MODEL = getModelValue() || "minimax/minimax-m2.7";
+        env.LLM_MODEL = getModelValue() || "deepseek/deepseek-v4-pro";
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         env.OPENAI_BASE_URL = url + "/v1";
@@ -787,9 +808,15 @@
         "", "model:"
       ];
       if (p.id === "nexus") {
-        lines.push(`  default: "${getModelValue() || "minimax/minimax-m2.7"}"`);
+        const model = getModelValue() || "deepseek/deepseek-v4-pro";
+        lines.push(`  default: "${model}"`);
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+        // Set context_length based on the selected model to avoid 256K fallback
+        const nexusSuggestions = SUGGESTED_MODELS.nexus || [];
+        const matched = nexusSuggestions.find(m => m.id === model);
+        const ctx = matched ? matched.context_length : 1000000;
+        lines.push(`  context_length: ${ctx}`);
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);

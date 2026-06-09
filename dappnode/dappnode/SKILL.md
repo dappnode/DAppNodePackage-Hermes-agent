@@ -70,6 +70,8 @@ To configure, use the Setup Wizard at `http://hermes-agent.dappnode:8080` and se
 1. Sign up at `https://nexus.dappnode.com` and create an API key
 2. In the Setup Wizard or `config.yaml`, set the provider to Nexus with base URL `https://nexus-api.dappnode.com/v1`
 
+**Context length pitfall**: Nexus uses a custom domain (`nexus-api.dappnode.com`) that Hermes cannot auto-resolve for context length detection — models default to 256K tokens. The DAppNode package automatically sets `model.context_length` to 1M for new setups, but if you see early context compression, run `hermes config set model.context_length 1000000`. See the `dappnode-nexus` skill for the full root-cause analysis and per-model context lengths.
+
 ## Troubleshooting
 
 ### Package Not Reachable
