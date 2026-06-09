@@ -22,6 +22,10 @@ const OLLAMA_CANDIDATES = [
 let openRouterCache = { models: [], ts: 0 };
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
+// In-memory cache for Nexus models (refresh every 1 hour — models change less often)
+let nexusCache = { models: [], ts: 0 };
+const NEXUS_CACHE_TTL = 60 * 60 * 1000;
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -140,6 +144,37 @@ async function fetchOpenRouterModels() {
 }
 
 /**
+ * Fetch models from Nexus public API.
+ * Returns sorted array of { id, name, context_length }.
+ */
+async function fetchNexusModels() {
+  const now = Date.now();
+  if (nexusCache.models.length && (now - nexusCache.ts) < NEXUS_CACHE_TTL) {
+    return nexusCache.models;
+  }
+  try {
+    const resp = await fetch("https://nexus-api.dappnode.com/v1/models", {
+      signal: AbortSignal.timeout(10000),
+      headers: { "Accept": "application/json" },
+    });
+    if (!resp.ok) return nexusCache.models;
+    const data = await resp.json();
+    const models = (data.data || [])
+      .filter((m) => m.id && m.kind !== "router") // exclude nexus/auto router
+      .map((m) => ({
+        id: m.id,
+        name: m.display_name || m.id,
+        context_length: m.context_size || 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    nexusCache = { models, ts: now };
+    return models;
+  } catch {
+    return nexusCache.models;
+  }
+}
+
+/**
  * Run `hermes status` and return the output.
  */
 function getHermesStatus() {
@@ -228,6 +263,13 @@ const server = http.createServer(async (req, res) => {
   // Fetch OpenRouter models (public API, cached)
   if (req.method === "GET" && url.pathname === "/api/models/openrouter") {
     const models = await fetchOpenRouterModels();
+    json(res, 200, { models });
+    return;
+  }
+
+  // Fetch Nexus models (public API, cached)
+  if (req.method === "GET" && url.pathname === "/api/models/nexus") {
+    const models = await fetchNexusModels();
     json(res, 200, { models });
     return;
   }

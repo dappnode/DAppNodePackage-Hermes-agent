@@ -424,15 +424,12 @@
     // Suggested models per provider (shown as autocomplete hints — user can type anything)
     const SUGGESTED_MODELS = {
       nexus: [
-        { id: "deepseek/deepseek-v4-pro", name: "DeepSeek V4 Pro", context_length: 1000000 },
-        { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash", context_length: 1000000 },
-        { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1", context_length: 1000000 },
-        { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", context_length: 200000 },
-        { id: "anthropic/claude-opus-4", name: "Claude Opus 4", context_length: 200000 },
-        { id: "openai/gpt-5.4", name: "GPT-5.4", context_length: 1050000 },
-        { id: "openai/gpt-5", name: "GPT-5", context_length: 400000 },
-        { id: "minimax/minimax-m2.7", name: "MiniMax M2.7", context_length: 1000000 },
-        { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", context_length: 2000000 },
+        { id: "deepseek/deepseek-v4-pro", name: "DeepSeek V4 Pro", context_length: 1048576 },
+        { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash", context_length: 1048576 },
+        { id: "moonshotai/kimi-k2.6", name: "Kimi K2.6", context_length: 262144 },
+        { id: "minimax/minmax-m3", name: "MiniMax M3", context_length: 512000 },
+        { id: "minimax/minimax-m2.7", name: "MiniMax M2.7", context_length: 204800 },
+        { id: "nexus/auto", name: "Auto Router", context_length: 1000000 },
       ],
       openai: ["gpt-4.1", "gpt-4.1-mini", "gpt-5.2", "o4-mini", "o3", "gpt-4o"],
       anthropic: ["claude-sonnet-4-5-20250929", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
@@ -446,6 +443,7 @@
     let currentStep = 0;
     let selectedProvider = null;
     let openRouterModels = [];
+    let nexusModels = [];
 
     // =========================================================================
     // Render provider cards
@@ -566,20 +564,11 @@
           </div>
           <div class="field">
             <label>Model</label>
-            <div class="hint">Select a suggested model or type any model ID supported by Nexus. Browse all models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
-            <div id="nexus-model-container"></div>
+            <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
+            <div id="nexus-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from Nexus...</div></div>
           </div>
         `;
-        const mc = document.getElementById("nexus-model-container");
-        const suggestions = SUGGESTED_MODELS.nexus || [];
-        mc.appendChild(createModelInput("nexus-model", suggestions, "e.g. deepseek/deepseek-v4-pro"));
-        // Pre-select DeepSeek V4 Pro as a sensible default
-        if (suggestions.length) {
-          setTimeout(() => {
-            const inp = document.getElementById("nexus-model-input");
-            if (inp) inp.value = suggestions[0].id;
-          }, 0);
-        }
+        fetchNexusModels();
         return;
       }
 
@@ -716,6 +705,28 @@
       }
     }
 
+    async function fetchNexusModels() {
+      try {
+        const resp = await fetch("/api/models/nexus");
+        const data = await resp.json();
+        nexusModels = data.models || [];
+      } catch {
+        nexusModels = [];
+      }
+      const mc = document.getElementById("nexus-model-container");
+      if (!mc) return;
+      mc.innerHTML = "";
+      const suggestions = nexusModels.length ? nexusModels : (SUGGESTED_MODELS.nexus || []);
+      mc.appendChild(createModelInput("nexus-model", suggestions,
+        nexusModels.length ? `Search ${nexusModels.length} models...` : "e.g. deepseek/deepseek-v4-pro"));
+      const inp = document.getElementById("nexus-model-input");
+      if (inp && suggestions.length) {
+        // Pre-select DeepSeek V4 Pro if available, otherwise first model
+        const ds = suggestions.find(m => m.id === "deepseek/deepseek-v4-pro");
+        inp.value = ds ? ds.id : suggestions[0].id;
+      }
+    }
+
     async function probeOllama() {
       const btn = document.getElementById("probe-btn");
       const icon = document.getElementById("probe-icon");
@@ -813,8 +824,9 @@
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
         // Set context_length based on the selected model to avoid 256K fallback
-        const nexusSuggestions = SUGGESTED_MODELS.nexus || [];
-        const matched = nexusSuggestions.find(m => m.id === model);
+        // Check live Nexus models first, then fall back to static suggestions
+        const allNexusSuggestions = nexusModels.length ? nexusModels : (SUGGESTED_MODELS.nexus || []);
+        const matched = allNexusSuggestions.find(m => m.id === model);
         const ctx = matched ? matched.context_length : 1000000;
         lines.push(`  context_length: ${ctx}`);
       } else if (p.id === "ollama") {

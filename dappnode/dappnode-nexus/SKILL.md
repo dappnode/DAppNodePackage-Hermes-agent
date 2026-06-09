@@ -45,11 +45,13 @@ Nexus runs as a service within the DAppNode ecosystem. Users access it via:
 
 ### Context length defaults to 256K with Nexus provider
 
-When Nexus is configured as the Hermes provider (`nexus-api.dappnode.com`), Hermes cannot auto-detect the model's true context length because:
+When Nexus is configured as the Hermes provider (`nexus-api.dappnode.com`), Hermes may not auto-detect the model's true context length because:
 
 1. `nexus-api.dappnode.com` is not in Hermes' `_URL_TO_PROVIDER` map → treated as an unknown custom endpoint
-2. The `/v1/models` endpoint returns `403 Forbidden` (Nexus does not expose model metadata publicly)
-3. Hermes skips all provider-aware lookups and falls back to `DEFAULT_FALLBACK_CONTEXT = 256_000` tokens
+2. Hermes may skip provider-aware lookups (Anthropic API, models.dev, hardcoded defaults)
+3. Falls back to `DEFAULT_FALLBACK_CONTEXT = 256_000` tokens if auto-detection fails
+
+> **Update**: The `/v1/models` endpoint now returns `context_size` per model. The DAppNode package auto-sets `model.context_length` as a safety net, but you can verify with `hermes config show`.
 
 **Symptom**: Hermes compresses context early, treats a 1M-token model as 256K, or shows `context_length: 256000` in `/usage`.
 
@@ -65,13 +67,11 @@ Common Nexus-proxied models and their context lengths:
 
 | Model | Context length |
 |-------|---------------|
-| `deepseek/deepseek-v4-pro` | 1,000,000 |
-| `deepseek/deepseek-v4-flash` | 1,000,000 |
-| `deepseek/deepseek-r1-0528` | 1,000,000 |
-| `anthropic/claude-sonnet-4` | 200,000 |
-| `anthropic/claude-opus-4` | 200,000 |
-| `openai/gpt-5` | 400,000 |
-| `openai/gpt-5.4` | 1,050,000 |
-| `minimax/minimax-m2.7` | 1,000,000 |
+| `deepseek/deepseek-v4-pro` | 1,048,576 (1M) |
+| `deepseek/deepseek-v4-flash` | 1,048,576 (1M) |
+| `moonshotai/kimi-k2.6` | 262,144 |
+| `minimax/minimax-m2.7` | 204,800 |
+| `minimax/minmax-m3` | 512,000 |
+| `nexus/auto` | Auto-routing (varies) |
 
-For the full resolution chain and root-cause analysis, see `references/nexus-context-length-resolution.md`.
+> **Note**: `/v1/models` endpoint is now publicly accessible and returns `context_size` per model. Hermes Agent can query this for auto-detection, but the DAppNode package also pre-sets a safe default.
