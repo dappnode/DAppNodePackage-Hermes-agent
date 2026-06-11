@@ -68,23 +68,7 @@ DAppNode Nexus (`https://nexus.dappnode.com`) is DAppNode's own privacy-focused 
 
 To configure, use the Setup Wizard at `http://hermes-agent.dappnode:8080` and select Nexus as the provider. Or manually:
 1. Sign up at `https://nexus.dappnode.com` and create an API key
-2. Add the key to `/opt/data/.env` as `NEXUS_API_KEY=<your-key>`
-3. Register Nexus as a named provider in `/opt/data/config.yaml` (current Hermes no longer reads `OPENAI_BASE_URL`, and only sends `OPENAI_API_KEY` to `openai.com` hosts, so a named provider is required):
-
-```yaml
-model:
-  default: "minimax/minimax-m2.7"   # browse models at nexus.dappnode.com/models
-  provider: "nexus"
-providers:
-  nexus:
-    name: "DAppNode Nexus"
-    base_url: "https://nexus-api.dappnode.com/v1"
-    key_env: "NEXUS_API_KEY"
-    default_model: "minimax/minimax-m2.7"
-    api_mode: "chat_completions"
-```
-
-Verify with `hermes doctor`; the resolved provider source should read `custom_provider:DAppNode Nexus`, not `no-key-required`.
+2. In the Setup Wizard or `config.yaml`, set the provider to Nexus with base URL `https://nexus-api.dappnode.com/v1`
 
 ## Troubleshooting
 
