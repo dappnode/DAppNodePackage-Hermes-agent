@@ -29,5 +29,5 @@ EXPOSE 3000 8080 8081 7681
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/init", "/usr/local/bin/entrypoint.sh"]
 CMD ["gateway", "run"]

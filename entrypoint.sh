@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/command/with-contenv bash
 # DAppNode Hermes Agent entrypoint
 # Based on upstream docker/entrypoint.sh (v2026.5.7) with DAppNode additions.
 set -e
@@ -84,14 +84,6 @@ if [ "$(id -u)" = "0" ]; then
 
     echo "Dropping root privileges"
     drop_to_hermes "$@"
-fi
-
-# If this script is PID 1 after the privilege drop, insert tini while still
-# running as `hermes`. That keeps signal forwarding/zombie reaping without
-# making the setup wizard signal a root-owned PID 1 on restart.
-if [ "${DAPPNODE_TINI_WRAPPED:-}" != "1" ] && [ "$$" = "1" ] && command -v tini >/dev/null 2>&1; then
-    export DAPPNODE_TINI_WRAPPED=1
-    exec tini -g -- "$0" "$@"
 fi
 
 # --- Running as hermes from here ---
