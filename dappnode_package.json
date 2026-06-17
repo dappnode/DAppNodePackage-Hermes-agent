@@ -1,6 +1,6 @@
 {
   "name": "hermes-agent.dnp.dappnode.eth",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "upstreamVersion": "v2026.6.5",
   "upstreamRepo": "NousResearch/hermes-agent",
   "upstreamArg": "UPSTREAM_VERSION",
