@@ -179,7 +179,15 @@ async function fetchNexusModels() {
  */
 function getHermesStatus() {
   return new Promise((resolve) => {
-    execFile("hermes", ["status"], { timeout: 15000, env: { ...process.env, HERMES_HOME } }, (err, stdout, stderr) => {
+    // This server runs as root (so /api/restart can SIGTERM PID 1 under
+    // s6-overlay), but the hermes CLI must run as the unprivileged hermes
+    // user — otherwise it writes root-owned files into HERMES_HOME and the
+    // gateway can no longer read/write them. Drop privileges via s6-setuidgid.
+    const [cmd, args] =
+      process.getuid && process.getuid() === 0
+        ? ["s6-setuidgid", ["hermes", "hermes", "status"]]
+        : ["hermes", ["status"]];
+    execFile(cmd, args, { timeout: 15000, env: { ...process.env, HERMES_HOME } }, (err, stdout, stderr) => {
       resolve({ ok: !err, output: (stdout || "") + (stderr || "") });
     });
   });

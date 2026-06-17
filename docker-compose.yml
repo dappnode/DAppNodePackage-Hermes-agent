@@ -19,6 +19,11 @@ services:
       API_SERVER_KEY: dappnode
       API_SERVER_CORS_ORIGINS: "*"
       GATEWAY_ALLOW_ALL_USERS: "true"
+      # Enable the upstream s6 dashboard service on the DAppNode port (8081).
+      HERMES_DASHBOARD: "true"
+      HERMES_DASHBOARD_HOST: 0.0.0.0
+      HERMES_DASHBOARD_PORT: "8081"
+      HERMES_DASHBOARD_INSECURE: "true"
     volumes:
       - hermes_data:/opt/data
     logging:

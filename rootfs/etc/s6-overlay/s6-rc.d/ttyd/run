@@ -1,0 +1,9 @@
+#!/command/with-contenv sh
+# shellcheck shell=sh
+# DAppNode web terminal (ttyd on :7681), running as the hermes user.
+# `bash -l` sources /etc/profile.d/hermes-venv.sh (installed by
+# 10-dappnode-setup), which puts the venv on PATH and cd's to HERMES_HOME.
+export HOME=/opt/data
+export TERM="${TERM:-xterm-256color}"
+cd /opt/data
+exec s6-setuidgid hermes ttyd -p 7681 -W bash -l

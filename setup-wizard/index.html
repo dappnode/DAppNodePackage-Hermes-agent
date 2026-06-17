@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,161 +21,531 @@
       --error: #f87171;
       --radius: 12px;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg); color: var(--text); min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
     }
 
     /* ---- Top Nav ---- */
     .topnav {
-      display: flex; align-items: center; gap: 2rem;
-      border-bottom: 1px solid var(--border); padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
       background: var(--card);
     }
+
     .topnav .logo {
-      font-weight: 700; font-size: 1.1rem; padding: 1rem 0;
+      font-weight: 700;
+      font-size: 1.1rem;
+      padding: 1rem 0;
       background: linear-gradient(135deg, var(--primary), var(--accent));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; white-space: nowrap;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
     }
-    .topnav .tabs { display: flex; gap: 0; margin-left: 1rem; }
+
+    .topnav .tabs {
+      display: flex;
+      gap: 0;
+      margin-left: 1rem;
+    }
+
     .topnav .tab {
-      padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-muted);
-      cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
       user-select: none;
     }
-    .topnav .tab:hover { color: var(--text); }
-    .topnav .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .topnav .tab:hover {
+      color: var(--text);
+    }
+
+    .topnav .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
 
     /* ---- Tab Content ---- */
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .page { max-width: 720px; margin: 0 auto; padding: 2rem 1rem; }
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
 
     /* ---- Dashboard ---- */
-    .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
-    @media (max-width: 540px) { .status-grid { grid-template-columns: 1fr; } }
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 540px) {
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .status-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 1rem 1.25rem;
     }
-    .status-card .label { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 4px; }
-    .status-card .value { font-size: 1.05rem; font-weight: 600; }
-    .status-card .value.ok { color: var(--success); }
-    .status-card .value.err { color: var(--error); }
-    .status-card .value.warn { color: var(--warning); }
-    .quick-links { display: flex; flex-direction: column; gap: 10px; margin-top: 1.5rem; }
-    .quick-links a {
-      display: block; padding: 12px 16px; background: var(--card);
-      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
-      text-decoration: none; font-size: 0.9rem; transition: border 0.2s;
+
+    .status-card .label {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 4px;
     }
-    .quick-links a:hover { border-color: var(--primary); }
-    .quick-links a small { color: var(--text-muted); display: block; margin-top: 2px; font-size: 0.8rem; }
+
+    .status-card .value {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .status-card .value.ok {
+      color: var(--success);
+    }
+
+    .status-card .value.err {
+      color: var(--error);
+    }
+
+    .status-card .value.warn {
+      color: var(--warning);
+    }
+
+    .quick-links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 1.5rem;
+    }
+
+    .quick-links a {
+      display: block;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: border 0.2s;
+    }
+
+    .quick-links a:hover {
+      border-color: var(--primary);
+    }
+
+    .quick-links a small {
+      color: var(--text-muted);
+      display: block;
+      margin-top: 2px;
+      font-size: 0.8rem;
+    }
 
     /* ---- Setup Wizard ---- */
-    .progress { display: flex; gap: 6px; margin-bottom: 2rem; }
-    .progress .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
-    .progress .bar.active { background: var(--primary); }
-    .progress .bar.done { background: var(--success); }
-    .step { display: none; }
-    .step.active { display: block; }
-    .step h2 { font-size: 1.35rem; margin-bottom: 0.5rem; }
-    .step .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5; }
-    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
-    @media (max-width: 480px) { .cards { grid-template-columns: 1fr; } }
+    .progress {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 2rem;
+    }
+
+    .progress .bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .progress .bar.active {
+      background: var(--primary);
+    }
+
+    .progress .bar.done {
+      background: var(--success);
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .step h2 {
+      font-size: 1.35rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .card {
-      background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
-      padding: 1rem; cursor: pointer; transition: all 0.2s;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .card:hover { background: var(--card-hover); border-color: var(--primary); }
-    .card.selected { border-color: var(--primary); background: var(--card-hover); }
-    .card .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
-    .card .card-desc { color: var(--text-muted); font-size: 0.8rem; line-height: 1.4; }
+
+    .card:hover {
+      background: var(--card-hover);
+      border-color: var(--primary);
+    }
+
+    .card.selected {
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+
+    .card .card-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .card .card-desc {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
     .card .card-tag {
-      display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px;
-      margin-top: 6px; background: rgba(255,215,0,0.15); color: var(--primary);
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      margin-top: 6px;
+      background: rgba(255, 215, 0, 0.15);
+      color: var(--primary);
     }
-    .card .card-tag.free { background: rgba(52,211,153,0.15); color: var(--success); }
+
+    .card .card-tag.free {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+    }
+
     .card.featured {
       grid-column: 1 / -1;
-      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02));
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 215, 0, 0.02));
       border-color: var(--primary);
       position: relative;
       padding: 1.25rem 1.25rem 1.25rem 1.25rem;
     }
-    .card.featured:hover { background: linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,215,0,0.04)); }
-    .card.featured.selected { background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06)); }
-    .card.featured .card-title { font-size: 1.1rem; margin-bottom: 6px; }
-    .card.featured .card-desc { font-size: 0.9rem; }
+
+    .card.featured:hover {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.14), rgba(255, 215, 0, 0.04));
+    }
+
+    .card.featured.selected {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(255, 215, 0, 0.06));
+    }
+
+    .card.featured .card-title {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+
+    .card.featured .card-desc {
+      font-size: 0.9rem;
+    }
+
     .card.featured .card-tag {
-      position: absolute; top: 10px; right: 12px; margin-top: 0;
-      background: var(--primary); color: #1a1a1a; font-weight: 600;
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      margin-top: 0;
+      background: var(--primary);
+      color: #1a1a1a;
+      font-weight: 600;
     }
-    .field { margin-bottom: 1.25rem; }
-    .field label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 6px; }
-    .field .hint { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px; line-height: 1.4; }
-    .field input, .field select {
-      width: 100%; padding: 10px 14px; background: var(--card);
-      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
-      font-size: 0.95rem; outline: none; transition: border 0.2s;
+
+    .field {
+      margin-bottom: 1.25rem;
     }
-    .field input:focus, .field select:focus { border-color: var(--primary); }
-    .field input::placeholder { color: var(--text-muted); }
-    .field select option { background: var(--card); color: var(--text); }
-    .field .optional-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
-    .model-input-wrap { position: relative; }
-    .model-input-wrap input { padding-right: 40px; }
+
+    .field label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .field .hint {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--primary);
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .field select option {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .field .optional-badge {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 6px;
+    }
+
+    .model-input-wrap {
+      position: relative;
+    }
+
+    .model-input-wrap input {
+      padding-right: 40px;
+    }
+
     .model-suggestions {
-      display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
-      max-height: 220px; overflow-y: auto; background: var(--card);
-      border: 1px solid var(--border); border-radius: 0 0 8px 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      max-height: 220px;
+      overflow-y: auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
-    .model-suggestions.open { display: block; }
+
+    .model-suggestions.open {
+      display: block;
+    }
+
     .model-suggestions .sg-item {
-      padding: 8px 14px; cursor: pointer; font-size: 0.85rem;
-      border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
     }
-    .model-suggestions .sg-item:hover { background: var(--card-hover); }
-    .model-suggestions .sg-item .sg-id { color: var(--text); }
-    .model-suggestions .sg-item .sg-ctx { color: var(--text-muted); font-size: 0.75rem; }
-    .model-suggestions .sg-loading { padding: 12px 14px; color: var(--text-muted); font-size: 0.85rem; }
-    .actions { display: flex; gap: 12px; margin-top: 2rem; }
-    .btn { padding: 12px 28px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; flex: 1; }
-    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .btn-secondary { background: var(--card); border: 1px solid var(--border); color: var(--text); }
-    .btn-secondary:hover { background: var(--card-hover); }
+
+    .model-suggestions .sg-item:hover {
+      background: var(--card-hover);
+    }
+
+    .model-suggestions .sg-item .sg-id {
+      color: var(--text);
+    }
+
+    .model-suggestions .sg-item .sg-ctx {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .model-suggestions .sg-loading {
+      padding: 12px 14px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-hover);
+    }
+
     .probe-btn {
-      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
     }
-    .probe-btn:hover { border-color: var(--primary); }
-    .probe-result { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5; }
-    .probe-result.ok { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--success); }
-    .probe-result.fail { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: var(--error); }
+
+    .probe-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .probe-result {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .probe-result.ok {
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--success);
+    }
+
+    .probe-result.fail {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--error);
+    }
+
     .config-preview {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 1rem; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.8rem;
-      line-height: 1.6; overflow-x: auto; max-height: 400px; overflow-y: auto;
-      white-space: pre; color: var(--text-muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre;
+      color: var(--text-muted);
     }
-    .success-icon { font-size: 3rem; text-align: center; margin-bottom: 1rem; }
+
+    .success-icon {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
 
     /* ---- Terminal ---- */
-    .terminal-wrap { display: flex; flex-direction: column; height: calc(100vh - 53px); }
-    .terminal-wrap iframe { flex: 1; border: none; background: #000; }
-    .terminal-hint {
-      padding: 8px 2rem; background: var(--card); border-top: 1px solid var(--border);
-      color: var(--text-muted); font-size: 0.8rem;
+    .terminal-wrap {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 53px);
     }
-    .terminal-hint code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+
+    .terminal-wrap iframe {
+      flex: 1;
+      border: none;
+      background: #000;
+    }
+
+    .terminal-hint {
+      padding: 8px 2rem;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .terminal-hint code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
+
 <body>
   <!-- ---- Top Navigation ---- -->
   <nav class="topnav">
@@ -191,10 +562,22 @@
     <div class="page">
       <h2 style="margin-bottom:1.25rem">Agent Overview</h2>
       <div class="status-grid" id="status-grid">
-        <div class="status-card"><div class="label">API Server</div><div class="value" id="st-api">Checking...</div></div>
-        <div class="status-card"><div class="label">Health</div><div class="value" id="st-health">Checking...</div></div>
-        <div class="status-card"><div class="label">Provider</div><div class="value" id="st-provider">—</div></div>
-        <div class="status-card"><div class="label">Model</div><div class="value" id="st-model">—</div></div>
+        <div class="status-card">
+          <div class="label">API Server</div>
+          <div class="value" id="st-api">Checking...</div>
+        </div>
+        <div class="status-card">
+          <div class="label">Health</div>
+          <div class="value" id="st-health">Checking...</div>
+        </div>
+        <div class="status-card">
+          <div class="label">Provider</div>
+          <div class="value" id="st-provider">—</div>
+        </div>
+        <div class="status-card">
+          <div class="label">Model</div>
+          <div class="value" id="st-model">—</div>
+        </div>
       </div>
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
@@ -222,13 +605,17 @@
   <div class="tab-content" id="tc-setup">
     <div class="page">
       <div class="progress" id="progress">
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
       </div>
 
       <!-- Step 0: Provider -->
       <div class="step active" data-step="0">
         <h2>Choose your AI Provider</h2>
-        <div class="subtitle">Pick one to get started — you can change later via the Terminal tab (<code>hermes model</code>) or by re-running this wizard.</div>
+        <div class="subtitle">Pick one to get started — you can change later via the Terminal tab
+          (<code>hermes model</code>) or by re-running this wizard.</div>
         <div class="cards" id="provider-cards"></div>
         <div class="actions">
           <button class="btn btn-primary" id="btn-step0" disabled onclick="goTo(1)">Next</button>
@@ -265,14 +652,18 @@
             <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
             Enable WhatsApp
           </label>
-          <div id="whatsapp-pair-notice" style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
+          <div id="whatsapp-pair-notice"
+            style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
             <strong style="color:var(--primary);">→ Pairing required</strong><br>
-            After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a mode and pair via QR code. You will need to manually restart the package after pairing to apply the changes. <br><br>
+            After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a
+            mode and pair via QR code. You will need to manually restart the package after pairing to apply the changes.
+            <br><br>
           </div>
         </div>
         <div class="field" id="whatsapp-users-field" style="display:none">
           <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
-          <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to allow anyone (not recommended).</div>
+          <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to
+            allow anyone (not recommended).</div>
           <input type="text" id="whatsapp-users" placeholder="15551234567,447700900123">
         </div>
         <div class="actions">
@@ -284,7 +675,8 @@
       <!-- Step 3: Review & Save -->
       <div class="step" data-step="3">
         <h2>Review &amp; Save</h2>
-        <div class="subtitle">You can also edit these files from the Terminal tab, or re-run this wizard at any time.</div>
+        <div class="subtitle">You can also edit these files from the Terminal tab, or re-run this wizard at any time.
+        </div>
         <h3 style="margin-bottom:0.5rem;font-size:1rem;">.env changes</h3>
         <div class="config-preview" id="env-preview" style="margin-bottom:1rem;"></div>
         <h3 style="margin-bottom:0.5rem;font-size:1rem;">config.yaml changes</h3>
@@ -302,7 +694,8 @@
         <div class="quick-links">
           <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
             Open Terminal
-            <small>Run <code>hermes doctor</code> to verify configuration or <code>hermes model</code> to change models</small>
+            <small>Run <code>hermes doctor</code> to verify configuration or <code>hermes model</code> to change
+              models</small>
           </a>
           <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
             Check API Health
@@ -400,7 +793,7 @@
         const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
         document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
         document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
-      } catch {}
+      } catch { }
     }
     refreshDashboard();
 
@@ -823,12 +1216,22 @@
         lines.push(`  default: "${model}"`);
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
-        // Set context_length based on the selected model to avoid 256K fallback
-        // Check live Nexus models first, then fall back to static suggestions
+        // Hermes reads the key for a custom endpoint from model.api_key in
+        // config.yaml (the documented source of truth). The NEXUS_API_KEY /
+        // OPENAI_API_KEY env vars are not a reliable path: NEXUS_API_KEY is
+        // never read, and the legacy OPENAI_* vars get cleared by config
+        // migration on boot. So write the key here.
+        const nexusKey = (document.getElementById("api-key").value || "").trim();
+        if (nexusKey) lines.push(`  api_key: "${nexusKey}"`);
+        // Set context_length from the live Nexus /v1/models data (falls back to
+        // the static suggestions). If the model isn't in either list we omit it
+        // and let the boot-time patch-config.py fetch the authoritative
+        // context_size from /v1/models, rather than guessing a number.
         const allNexusSuggestions = nexusModels.length ? nexusModels : (SUGGESTED_MODELS.nexus || []);
         const matched = allNexusSuggestions.find(m => m.id === model);
-        const ctx = matched ? matched.context_length : 1000000;
-        lines.push(`  context_length: ${ctx}`);
+        if (matched && matched.context_length) {
+          lines.push(`  context_length: ${matched.context_length}`);
+        }
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
@@ -846,6 +1249,13 @@
           lines.push(`  provider: "custom"`);
         }
         if (baseUrl) lines.push(`  base_url: "${baseUrl}"`);
+        // For an OpenAI-compatible custom endpoint, write the key into
+        // config.yaml (Anthropic custom uses ANTHROPIC_API_KEY in .env, which
+        // Hermes reads natively).
+        if (spec !== "anthropic") {
+          const customKey = (document.getElementById("custom-api-key").value || "").trim();
+          if (customKey) lines.push(`  api_key: "${customKey}"`);
+        }
       } else {
         const model = getModelValue();
         if (model) lines.push(`  default: "${p.id === "openrouter" ? model : p.id + "/" + model}"`);
@@ -874,7 +1284,11 @@
         } else { envLines.push(`${k}=${v}`); }
       }
       document.getElementById("env-preview").textContent = envLines.join("\n") || "(no changes)";
-      document.getElementById("config-preview").textContent = yaml;
+      // Mask any inline api_key so the secret isn't shown in plaintext (the
+      // unmasked yaml from buildConfigYaml() is still what gets saved).
+      const safeYaml = yaml.replace(/(\bapi_key:\s*")([^"]*)(")/g,
+        (m, a, v, c) => a + v.slice(0, 4) + "*".repeat(Math.max(0, v.length - 4)) + c);
+      document.getElementById("config-preview").textContent = safeYaml;
       goTo(3);
     }
 
@@ -892,7 +1306,7 @@
         if (resp.ok) {
           goTo(4);
           if (needsRestart) {
-            setTimeout(() => fetch("/api/restart", { method: "POST" }).catch(() => {}), 500);
+            setTimeout(() => fetch("/api/restart", { method: "POST" }).catch(() => { }), 500);
           }
         } else {
           const data = await resp.json();
@@ -906,4 +1320,5 @@
     }
   </script>
 </body>
+
 </html>

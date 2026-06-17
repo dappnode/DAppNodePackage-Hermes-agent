@@ -16,8 +16,16 @@ COPY setup-wizard/ /opt/setup-wizard/
 # Copy DAppNode context files (seeded into HERMES_HOME on first boot)
 COPY dappnode/ /opt/dappnode/
 
-# Copy entrypoint script
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+# DAppNode s6-overlay customizations: a cont-init bootstrap hook plus the
+# setup-wizard and ttyd long-run services. We deliberately do NOT override the
+# image ENTRYPOINT — the upstream image runs s6-overlay's /init (which handles
+# UID remap, chown, config seeding, schema migration, skills sync and drops to
+# the hermes user via main-wrapper.sh). Overriding it and re-dropping privileges
+# ourselves crash-looped the container (tini is symlinked to /init upstream).
+COPY rootfs/ /
+RUN chmod 0755 /etc/cont-init.d/10-dappnode-setup \
+      /etc/s6-overlay/s6-rc.d/setup-wizard/run \
+      /etc/s6-overlay/s6-rc.d/ttyd/run
 
 # Persistent data directory
 ENV HERMES_HOME=/opt/data
@@ -29,5 +37,7 @@ EXPOSE 3000 8080 8081 7681
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# ENTRYPOINT is inherited from the upstream image (s6-overlay /init +
+# docker/main-wrapper.sh). main-wrapper routes the CMD below to
+# `s6-setuidgid hermes hermes gateway run`.
 CMD ["gateway", "run"]
