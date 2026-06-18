@@ -807,7 +807,6 @@
       { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
       { id: "google", name: "Google Gemini", desc: "Gemini 3 Pro, 2.5 Pro & Flash", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
       { id: "ollama", name: "Ollama (Local)", desc: "Run models on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
-      { id: "groq", name: "Groq", desc: "Ultra-fast Llama, Qwen, DeepSeek", tag: "Free tier", free: true, envKey: "GROQ_API_KEY", provider: "groq" },
       { id: "deepseek", name: "DeepSeek", desc: "V3.2, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
       { id: "huggingface", name: "Hugging Face", desc: "20+ open models via unified router", tag: "Free tier", free: true, envKey: "HF_TOKEN", provider: "huggingface" },
       { id: "copilot", name: "GitHub Copilot", desc: "GPT-5, Claude, Gemini via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
@@ -847,7 +846,8 @@
       const featured = p.id === "nexus";
       card.className = "card" + (featured ? " featured" : "");
       card.dataset.id = p.id;
-      card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div><span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>`;
+      const tagHtml = featured ? `<span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>` : "";
+      card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div>${tagHtml}`;
       card.onclick = () => selectProviderCard(p.id);
       cardsEl.appendChild(card);
     });
