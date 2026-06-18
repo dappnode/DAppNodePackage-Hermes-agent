@@ -22,6 +22,10 @@ const OLLAMA_CANDIDATES = [
 let openRouterCache = { models: [], ts: 0 };
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
+// In-memory cache for Nexus models (refresh every 1 hour — models change less often)
+let nexusCache = { models: [], ts: 0 };
+const NEXUS_CACHE_TTL = 60 * 60 * 1000;
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -140,11 +144,50 @@ async function fetchOpenRouterModels() {
 }
 
 /**
+ * Fetch models from Nexus public API.
+ * Returns sorted array of { id, name, context_length }.
+ */
+async function fetchNexusModels() {
+  const now = Date.now();
+  if (nexusCache.models.length && (now - nexusCache.ts) < NEXUS_CACHE_TTL) {
+    return nexusCache.models;
+  }
+  try {
+    const resp = await fetch("https://nexus-api.dappnode.com/v1/models", {
+      signal: AbortSignal.timeout(10000),
+      headers: { "Accept": "application/json" },
+    });
+    if (!resp.ok) return nexusCache.models;
+    const data = await resp.json();
+    const models = (data.data || [])
+      .filter((m) => m.id && m.kind !== "router") // exclude nexus/auto router
+      .map((m) => ({
+        id: m.id,
+        name: m.display_name || m.id,
+        context_length: m.context_size || 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    nexusCache = { models, ts: now };
+    return models;
+  } catch {
+    return nexusCache.models;
+  }
+}
+
+/**
  * Run `hermes status` and return the output.
  */
 function getHermesStatus() {
   return new Promise((resolve) => {
-    execFile("hermes", ["status"], { timeout: 15000, env: { ...process.env, HERMES_HOME } }, (err, stdout, stderr) => {
+    // This server runs as root (so /api/restart can SIGTERM PID 1 under
+    // s6-overlay), but the hermes CLI must run as the unprivileged hermes
+    // user — otherwise it writes root-owned files into HERMES_HOME and the
+    // gateway can no longer read/write them. Drop privileges via s6-setuidgid.
+    const [cmd, args] =
+      process.getuid && process.getuid() === 0
+        ? ["s6-setuidgid", ["hermes", "hermes", "status"]]
+        : ["hermes", ["status"]];
+    execFile(cmd, args, { timeout: 15000, env: { ...process.env, HERMES_HOME } }, (err, stdout, stderr) => {
       resolve({ ok: !err, output: (stdout || "") + (stderr || "") });
     });
   });
@@ -228,6 +271,13 @@ const server = http.createServer(async (req, res) => {
   // Fetch OpenRouter models (public API, cached)
   if (req.method === "GET" && url.pathname === "/api/models/openrouter") {
     const models = await fetchOpenRouterModels();
+    json(res, 200, { models });
+    return;
+  }
+
+  // Fetch Nexus models (public API, cached)
+  if (req.method === "GET" && url.pathname === "/api/models/nexus") {
+    const models = await fetchNexusModels();
     json(res, 200, { models });
     return;
   }

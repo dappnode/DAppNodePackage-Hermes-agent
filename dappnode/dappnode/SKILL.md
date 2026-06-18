@@ -86,6 +86,8 @@ providers:
 
 Verify with `hermes doctor`; the resolved provider source should read `custom_provider:DAppNode Nexus`, not `no-key-required`.
 
+**Context length pitfall**: Nexus uses a custom domain (`nexus-api.dappnode.com`) that Hermes cannot auto-resolve for context length detection — models default to 256K tokens. The DAppNode package automatically sets `model.context_length` to 1M for new setups, but if you see early context compression, run `hermes config set model.context_length 1000000`. See the `dappnode-nexus` skill for the full root-cause analysis and per-model context lengths.
+
 ## Troubleshooting
 
 ### Package Not Reachable
