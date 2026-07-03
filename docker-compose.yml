@@ -16,14 +16,25 @@ services:
       API_SERVER_ENABLED: "true"
       API_SERVER_PORT: "3000"
       API_SERVER_HOST: 0.0.0.0
-      API_SERVER_KEY: dappnode
+      # Must be 16+ chars and not a known placeholder — upstream now refuses
+      # to start the API server (terminal-capable agent dispatch) with a
+      # weak/guessable key, even on loopback binds.
+      API_SERVER_KEY: "e128aa3f5120f9ebbb83488241b6698423914c575826fbfb4542bfdc65954f2e"
       API_SERVER_CORS_ORIGINS: "*"
       GATEWAY_ALLOW_ALL_USERS: "true"
       # Enable the upstream s6 dashboard service on the DAppNode port (8081).
       HERMES_DASHBOARD: "true"
       HERMES_DASHBOARD_HOST: 0.0.0.0
       HERMES_DASHBOARD_PORT: "8081"
-      HERMES_DASHBOARD_INSECURE: "true"
+      # Non-loopback binds require a registered auth provider (upstream fail-closed
+      # hardening, June 2026) — HERMES_DASHBOARD_INSECURE no longer bypasses this.
+      # Use the bundled username/password provider with the same static-credential
+      # convention as API_SERVER_KEY above; the actual trust boundary is the
+      # DAppNode private network / VPN, not this credential.
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: dappnode
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: dappnode
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: "UKJuFVZecdpgo1ZdqBojtM8ujvEVDxLSS7sIGtY1E4Y="
+      HERMES_DASHBOARD_BASIC_AUTH_TTL_SECONDS: "2592000"
     volumes:
       - hermes_data:/opt/data
     logging:
