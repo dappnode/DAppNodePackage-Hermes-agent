@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        UPSTREAM_VERSION: v2026.7.1
+        UPSTREAM_VERSION: v2026.7.7
     image: hermes-agent.dnp.dappnode.eth:0.1.0
     container_name: DAppNodePackage-hermes-agent.dnp.dappnode.eth
     restart: unless-stopped
