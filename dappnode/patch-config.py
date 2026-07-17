@@ -57,7 +57,7 @@ def write_dashboard_password(username, password):
         "\n".join(
             [
                 "Hermes dashboard login",
-                "URL: http://hermes-agent.dappnode:8081",
+                "URL: http://hermes-agent.dappnode:8080/dashboard",
                 f"Username: {username}",
                 f"Password: {password}",
                 "",
