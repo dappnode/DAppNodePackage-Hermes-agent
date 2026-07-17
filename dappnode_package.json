@@ -62,7 +62,7 @@
     "homepage": "https://hermes-agent.nousresearch.com",
     "setup": "http://hermes-agent.dappnode:8080",
     "terminal": "http://hermes-agent.dappnode:7681",
-    "ui": "http://hermes-agent.dappnode:8081"
+    "ui": "http://hermes-agent.dappnode:8080/dashboard"
   },
   "name": "hermes-agent.dnp.dappnode.eth",
   "repository": {
