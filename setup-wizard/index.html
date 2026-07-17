@@ -81,6 +81,26 @@
       border-bottom-color: var(--primary);
     }
 
+    @media (max-width: 540px) {
+      .topnav {
+        gap: 8px;
+        padding: 0 12px;
+      }
+
+      .topnav .logo {
+        font-size: 0.9rem;
+      }
+
+      .topnav .tabs {
+        margin-left: 0;
+      }
+
+      .topnav .tab {
+        padding: 1rem 0.65rem;
+        font-size: 0.78rem;
+      }
+    }
+
     /* ---- Tab Content ---- */
     .tab-content {
       display: none;
@@ -138,6 +158,103 @@
 
     .status-card .value.warn {
       color: var(--warning);
+    }
+
+    .dashboard-access {
+      padding: 1.25rem 0;
+      margin-bottom: 1.5rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dashboard-access-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 1rem;
+    }
+
+    .dashboard-access-head h3 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .dashboard-access-head p,
+    .dashboard-auth-message {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .dashboard-link {
+      flex: 0 0 auto;
+      padding: 8px 14px;
+      background: var(--primary);
+      border-radius: 8px;
+      color: #1a1a1a;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .dashboard-credentials {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .credential-field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .credential-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      min-height: 40px;
+    }
+
+    .credential-row input {
+      min-width: 0;
+      padding: 9px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px 0 0 6px;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
+    .credential-action {
+      padding: 0 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 0;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .credential-action:last-child {
+      border-radius: 0 6px 6px 0;
+    }
+
+    .credential-action:hover {
+      border-color: var(--primary);
+    }
+
+    @media (max-width: 620px) {
+      .dashboard-access-head {
+        flex-direction: column;
+      }
+
+      .dashboard-credentials {
+        grid-template-columns: 1fr;
+      }
     }
 
     .quick-links {
@@ -579,6 +696,37 @@
           <div class="value" id="st-model">—</div>
         </div>
       </div>
+      <section class="dashboard-access" aria-labelledby="dashboard-access-title">
+        <div class="dashboard-access-head">
+          <div>
+            <h3 id="dashboard-access-title">Hermes Dashboard Login</h3>
+            <p>Generated automatically for this DAppNode installation.</p>
+          </div>
+          <a class="dashboard-link" id="dashboard-link" href="http://hermes-agent.dappnode:8081/login?next=%2F"
+            target="_blank">Open dashboard</a>
+        </div>
+        <div class="dashboard-credentials" id="dashboard-credentials">
+          <div class="credential-field">
+            <label for="dashboard-username">Username</label>
+            <div class="credential-row">
+              <input id="dashboard-username" type="text" value="Loading..." readonly>
+              <button class="credential-action" type="button"
+                onclick="copyDashboardCredential('username', this)">Copy</button>
+            </div>
+          </div>
+          <div class="credential-field">
+            <label for="dashboard-password">Password</label>
+            <div class="credential-row">
+              <input id="dashboard-password" type="password" value="" readonly>
+              <button class="credential-action" id="dashboard-password-toggle" type="button"
+                onclick="toggleDashboardPassword()">Show</button>
+              <button class="credential-action" type="button"
+                onclick="copyDashboardCredential('password', this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="dashboard-auth-message" id="dashboard-auth-message" hidden></div>
+      </section>
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
         <a href="#" onclick="event.preventDefault(); switchTab('setup')">
@@ -589,9 +737,9 @@
           Web Terminal
           <small>Run hermes CLI commands — hermes model, hermes doctor, hermes config, etc.</small>
         </a>
-        <a href="http://hermes-agent.dappnode:8081" target="_blank">
+        <a href="http://hermes-agent.dappnode:8081/login?next=%2F" target="_blank">
           Hermes Dashboard
-          <small>Credentials are saved in /opt/data/dashboard-login.txt</small>
+          <small>Open the protected agent dashboard</small>
         </a>
         <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
           Health Check
@@ -762,6 +910,67 @@
     // Dashboard
     // =========================================================================
     let _dashboardPollTimer = null;
+    let _dashboardCredentials = { username: "", password: "" };
+
+    function getDashboardUrl() {
+      const url = new URL(location.href);
+      url.port = "8081";
+      url.pathname = "/login";
+      url.search = "?next=%2F";
+      url.hash = "";
+      return url.toString();
+    }
+
+    async function refreshDashboardAuth() {
+      document.getElementById("dashboard-link").href = getDashboardUrl();
+      try {
+        const resp = await fetch("/api/dashboard-auth", { cache: "no-store" });
+        const data = await resp.json();
+        if (!data.available) throw new Error("credentials unavailable");
+        _dashboardCredentials = {
+          username: data.username || "",
+          password: data.password || "",
+        };
+        document.getElementById("dashboard-username").value = _dashboardCredentials.username;
+        document.getElementById("dashboard-password").value = _dashboardCredentials.password;
+        document.getElementById("dashboard-credentials").hidden = false;
+        document.getElementById("dashboard-auth-message").hidden = true;
+      } catch {
+        document.getElementById("dashboard-credentials").hidden = true;
+        const message = document.getElementById("dashboard-auth-message");
+        message.textContent = "Dashboard credentials are managed outside the Setup UI.";
+        message.hidden = false;
+      }
+    }
+
+    function toggleDashboardPassword() {
+      const input = document.getElementById("dashboard-password");
+      const button = document.getElementById("dashboard-password-toggle");
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      button.textContent = reveal ? "Hide" : "Show";
+    }
+
+    async function copyDashboardCredential(name, button) {
+      const value = _dashboardCredentials[name] || "";
+      if (!value) return;
+      try {
+        if (!navigator.clipboard) throw new Error("clipboard unavailable");
+        await navigator.clipboard.writeText(value);
+      } catch {
+        const helper = document.createElement("textarea");
+        helper.value = value;
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.appendChild(helper);
+        helper.select();
+        document.execCommand("copy");
+        helper.remove();
+      }
+      const previous = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => { button.textContent = previous; }, 1200);
+    }
 
     async function refreshDashboard() {
       try {
@@ -799,6 +1008,7 @@
         document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
         document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
       } catch { }
+      refreshDashboardAuth();
     }
     refreshDashboard();
 

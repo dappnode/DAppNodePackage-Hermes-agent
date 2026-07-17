@@ -16,6 +16,12 @@ COPY setup-wizard/ /opt/setup-wizard/
 # Copy DAppNode context files (seeded into HERMES_HOME on first boot)
 COPY dappnode/ /opt/dappnode/
 
+# v2026.7.1 auto-starts OAuth when BasicAuthProvider is the only dashboard
+# provider, even though that provider only supports the password form. This
+# narrow backport is already present upstream and can be removed after the
+# package moves to a release containing it.
+RUN python3 /opt/dappnode/backport-dashboard-auth.py
+
 # DAppNode s6-overlay customizations: a cont-init bootstrap hook plus the
 # setup-wizard and ttyd long-run services. We deliberately do NOT override the
 # image ENTRYPOINT — the upstream image runs s6-overlay's /init (which handles
