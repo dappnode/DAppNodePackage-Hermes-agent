@@ -89,10 +89,16 @@ def configure_dashboard_auth(config):
     if not str(basic.get("secret") or "").strip():
         basic["secret"] = secrets.token_urlsafe(32)
 
-    if str(basic.get("password_hash") or "").strip() or str(basic.get("password") or "").strip():
+    password = read_dashboard_password(username)
+    has_config_password = bool(str(basic.get("password_hash") or "").strip() or str(basic.get("password") or "").strip())
+    if password and has_config_password:
         return False
 
-    password = read_dashboard_password(username) or secrets.token_urlsafe(24)
+    # If Hermes already has only a password hash but DAppNode has no saved
+    # plaintext credential, the setup wizard cannot perform its auto-login
+    # handoff. Generate a new DAppNode-managed password and keep both files in
+    # sync so users are not stranded at the raw dashboard login screen.
+    password = password or secrets.token_urlsafe(24)
 
     try:
         from plugins.dashboard_auth.basic import hash_password
@@ -102,6 +108,7 @@ def configure_dashboard_auth(config):
     except Exception:
         # The bundled provider can hash plaintext at load time. This fallback
         # keeps the dashboard gated even if the helper import moves upstream.
+        basic["password_hash"] = ""
         basic["password"] = password
 
     write_dashboard_password(username, password)

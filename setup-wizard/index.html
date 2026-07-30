@@ -515,6 +515,48 @@
       color: var(--error);
     }
 
+    .nexus-auth-panel {
+      background: rgba(255, 215, 0, 0.08);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .nexus-auth-panel .btn {
+      width: 100%;
+    }
+
+    .nexus-auth-note {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      margin-top: 0.75rem;
+    }
+
+    .nexus-auth-result {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .nexus-auth-result.ok {
+      display: block;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--success);
+    }
+
+    .nexus-auth-result.fail {
+      display: block;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--error);
+    }
+
     .config-preview {
       background: var(--card);
       border: 1px solid var(--border);
@@ -660,6 +702,16 @@
         <h2>Integrations</h2>
         <div class="subtitle">Optional — skip any you don't need.</div>
         <div class="field">
+          <label>Dashboard Username</label>
+          <div class="hint">Used for the Hermes Dashboard login.</div>
+          <input type="text" id="dashboard-username" value="dappnode" autocomplete="username" placeholder="dappnode">
+        </div>
+        <div class="field">
+          <label>Dashboard Password</label>
+          <div class="hint">Leave blank to keep the current dashboard password.</div>
+          <input type="password" id="dashboard-password" autocomplete="new-password" placeholder="Set a dashboard password">
+        </div>
+        <div class="field">
           <label>Telegram Bot Token <span class="optional-badge">optional</span></label>
           <div class="hint">From <strong>@BotFather</strong> on Telegram.</div>
           <input type="text" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNO...">
@@ -783,6 +835,22 @@
     // =========================================================================
     let _dashboardPollTimer = null;
 
+    function dashboardUsernameFromConfig(raw, env) {
+      const fromEnv = (env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "").trim();
+      if (fromEnv) return fromEnv;
+      const match = String(raw || "").match(/basic_auth:\s*[\s\S]*?username:\s*["']?([^"'\n]+)/);
+      return match ? match[1].trim() : "dappnode";
+    }
+
+    function hydrateDashboardAuthFields(raw, env) {
+      existingEnv = env || {};
+      existingDashboardUsername = dashboardUsernameFromConfig(raw, existingEnv);
+      const usernameEl = document.getElementById("dashboard-username");
+      if (usernameEl && !dashboardUsernameTouched) {
+        usernameEl.value = existingDashboardUsername;
+      }
+    }
+
     async function refreshDashboard() {
       try {
         const resp = await fetch("/api/health");
@@ -814,6 +882,7 @@
         const data = await resp.json();
         const env = data.env || {};
         const raw = data.config || "";
+        hydrateDashboardAuthFields(raw, env);
         const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
         const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
         document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
@@ -861,6 +930,9 @@
     let selectedProvider = null;
     let openRouterModels = [];
     let nexusModels = [];
+    let existingEnv = {};
+    let existingDashboardUsername = "";
+    let dashboardUsernameTouched = false;
 
     // =========================================================================
     // Render provider cards
@@ -887,6 +959,9 @@
 
     document.getElementById("telegram-token").addEventListener("input", (e) => {
       document.getElementById("telegram-users-field").style.display = e.target.value.trim() ? "block" : "none";
+    });
+    document.getElementById("dashboard-username").addEventListener("input", () => {
+      dashboardUsernameTouched = true;
     });
     document.getElementById("whatsapp-enabled").addEventListener("change", (e) => {
       document.getElementById("whatsapp-users-field").style.display = e.target.checked ? "block" : "none";
@@ -974,10 +1049,15 @@
       if (p.id === "nexus") {
         container.innerHTML = `
           <h2>Configure DAppNode Nexus</h2>
-          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Sign up &amp; get your API key &rarr;</a></div>
+          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
+          <div class="nexus-auth-panel">
+            <button class="btn btn-primary" id="nexus-login-btn" onclick="startNexusLogin()">Login with Nexus &amp; create API key</button>
+            <div class="nexus-auth-note">Creates a Nexus API key for this Hermes Agent account and fills it below. <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">Manage your keys</a>.</div>
+            <div class="nexus-auth-result" id="nexus-auth-result"></div>
+          </div>
           <div class="field">
             <label>Nexus API Key</label>
-            <div class="hint">Sign up at <strong>nexus.dappnode.com</strong> and create an API key from your dashboard.</div>
+            <div class="hint">Use Nexus login above, or paste a key from <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">nexus.dappnode.com/api-keys</a>.</div>
             <input type="password" id="api-key" placeholder="Paste your Nexus API key here">
           </div>
           <div class="field">
@@ -1145,6 +1225,75 @@
       }
     }
 
+    function showNexusAuthResult(kind, message) {
+      const el = document.getElementById("nexus-auth-result");
+      if (!el) return;
+      el.textContent = message;
+      el.className = "nexus-auth-result " + (kind === "ok" ? "ok" : "fail");
+    }
+
+    function removeNexusAuthParams() {
+      const next = new URL(window.location.href);
+      for (const key of ["nexus_auth", "nexus_message", "nexus_result"]) {
+        next.searchParams.delete(key);
+      }
+      window.history.replaceState(null, "", next.pathname + next.search + next.hash);
+    }
+
+    function startNexusLogin() {
+      const btn = document.getElementById("nexus-login-btn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Opening Nexus login...";
+      }
+      const current = new URL(window.location.href);
+      for (const key of ["nexus_auth", "nexus_message", "nexus_result"]) {
+        current.searchParams.delete(key);
+      }
+      const returnTo = current.pathname + current.search + current.hash;
+      window.location.href = "/nexus/auth/start?returnTo=" + encodeURIComponent(returnTo || "/");
+    }
+
+    async function handleNexusAuthRedirect() {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get("nexus_auth");
+      if (!status) return;
+
+      switchTab("setup");
+      selectProviderCard("nexus");
+      goTo(1);
+
+      try {
+        if (status === "error") {
+          showNexusAuthResult("fail", params.get("nexus_message") || "Nexus login failed. Please try again.");
+          return;
+        }
+
+        const resultId = params.get("nexus_result");
+        if (!resultId) {
+          showNexusAuthResult("fail", "Nexus login finished without an API key result. Please try again.");
+          return;
+        }
+
+        showNexusAuthResult("ok", "Creating Nexus API key...");
+        const resp = await fetch("/api/nexus/auth/result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: resultId }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || "Could not retrieve the generated Nexus API key");
+
+        const input = document.getElementById("api-key");
+        if (input) input.value = data.apiKey || "";
+        showNexusAuthResult("ok", "Nexus API key created. Choose a model and continue.");
+      } catch (err) {
+        showNexusAuthResult("fail", err.message || "Nexus login failed. Please try again.");
+      } finally {
+        removeNexusAuthParams();
+      }
+    }
+
     async function probeOllama() {
       const btn = document.getElementById("probe-btn");
       const icon = document.getElementById("probe-icon");
@@ -1186,6 +1335,24 @@
       const raw = (url || "").trim();
       const base = (raw || "http://ollama-cpu.dappnode:11434").replace(/\/+$/, "");
       return base.endsWith("/v1") ? base : base + "/v1";
+    }
+
+    function buildDashboardAuthEnv() {
+      const env = {};
+      const username = (document.getElementById("dashboard-username")?.value || "").trim();
+      const password = (document.getElementById("dashboard-password")?.value || "").trim();
+      if (username) env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME = username;
+      if (password) env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD = password;
+      return env;
+    }
+
+    function dashboardAuthChanged() {
+      const dashboardEnv = buildDashboardAuthEnv();
+      const username = dashboardEnv.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "";
+      return Boolean(
+        dashboardEnv.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+        || (username && username !== existingDashboardUsername)
+      );
     }
 
     function buildEnv() {
@@ -1231,6 +1398,7 @@
         const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
         if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
       }
+      Object.assign(env, buildDashboardAuthEnv());
       return env;
     }
 
@@ -1309,7 +1477,9 @@
       const yaml = buildConfigYaml();
       const envLines = [];
       for (const [k, v] of Object.entries(env)) {
-        if (k.includes("KEY") || k.includes("TOKEN") || k.includes("SECRET")) {
+        if (k.includes("PASSWORD")) {
+          envLines.push(`${k}=${"*".repeat(Math.max(8, v.length))}`);
+        } else if (k.includes("KEY") || k.includes("TOKEN") || k.includes("SECRET")) {
           envLines.push(`${k}=${v.slice(0, 8)}${"*".repeat(Math.max(0, v.length - 8))}`);
         } else { envLines.push(`${k}=${v}`); }
       }
@@ -1326,7 +1496,12 @@
       const btn = document.getElementById("btn-save");
       btn.disabled = true; btn.textContent = "Saving...";
       const env = buildEnv();
-      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED);
+      if (env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD && !env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME) {
+        alert("Dashboard username is required when setting a dashboard password.");
+        btn.disabled = false; btn.textContent = "Save Configuration";
+        return;
+      }
+      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED || dashboardAuthChanged());
       try {
         const resp = await fetch("/api/config", {
           method: "POST",
@@ -1348,6 +1523,8 @@
         btn.disabled = false; btn.textContent = "Save Configuration";
       }
     }
+
+    handleNexusAuthRedirect();
   </script>
 </body>
 
