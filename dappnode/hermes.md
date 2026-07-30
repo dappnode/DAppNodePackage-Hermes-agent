@@ -8,7 +8,7 @@ Users connected to the DAppNode (via VPN or WiFi) access services at:
 
 | Service         | URL                                      |
 |-----------------|------------------------------------------|
-| Web Dashboard   | http://hermes-agent.dappnode:8081        |
+| Web Dashboard   | http://hermes-agent.dappnode:8080/dashboard |
 | Setup Wizard    | http://hermes-agent.dappnode:8080        |
 | Gateway API     | http://hermes-agent.dappnode:3000        |
 | Web Terminal    | http://hermes-agent.dappnode:7681        |

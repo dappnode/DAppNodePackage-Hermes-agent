@@ -50,9 +50,24 @@ if [ ! -d "$HERMES_HOME/skills/devops/dappnode-nexus" ] && [ -d /opt/dappnode/da
     echo "[dappnode] Seeded DAppNode Nexus skill"
 fi
 
+# --- Repair .env for DAppNode defaults and older wizard output -------------
+# Upstream now rejects weak API_SERVER_KEY values and refuses to start
+# WhatsApp when WHATSAPP_ENABLED=true but no QR pairing exists yet.
+as_hermes "$INSTALL_DIR/.venv/bin/python3" /opt/dappnode/bootstrap-env.py \
+    || echo "[dappnode] Warning: could not repair .env, continuing with defaults"
+
 # --- Patch config.yaml for DAppNode (LAN bind, ports, Nexus ctx length) -----
 # Run as hermes with the venv python so config.yaml stays hermes-owned.
 if [ -f "$HERMES_HOME/config.yaml" ]; then
     as_hermes "$INSTALL_DIR/.venv/bin/python3" /opt/dappnode/patch-config.py \
         || echo "[dappnode] Warning: could not patch config.yaml, continuing with defaults"
+fi
+if [ -d "$HERMES_HOME/profiles" ]; then
+    for profile_home in "$HERMES_HOME"/profiles/*; do
+        if [ -d "$profile_home" ] && [ -f "$profile_home/config.yaml" ]; then
+            as_hermes env HERMES_HOME="$profile_home" DAPPNODE_SKIP_DASHBOARD_AUTH=1 \
+                "$INSTALL_DIR/.venv/bin/python3" /opt/dappnode/patch-config.py \
+                || echo "[dappnode] Warning: could not patch profile config.yaml at $profile_home"
+        fi
+    done
 fi

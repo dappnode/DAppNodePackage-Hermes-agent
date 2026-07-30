@@ -7,11 +7,16 @@ and run its schema migration. Idempotent: safe to run on every boot.
 """
 import json
 import os
+import secrets
 import urllib.request
+from pathlib import Path
 
 import yaml
 
-config_path = os.path.join(os.environ.get("HERMES_HOME", "/opt/data"), "config.yaml")
+hermes_home = Path(os.environ.get("HERMES_HOME", "/opt/data"))
+config_path = hermes_home / "config.yaml"
+dashboard_login_path = hermes_home / "dashboard-login.txt"
+skip_dashboard_auth = os.environ.get("DAPPNODE_SKIP_DASHBOARD_AUTH") == "1"
 
 
 def fetch_nexus_context_size(base_url, model_id):
@@ -32,6 +37,75 @@ def fetch_nexus_context_size(base_url, model_id):
             size = m.get("context_size")
             return int(size) if size else None
     return None
+
+
+def read_dashboard_password(username):
+    try:
+        values = {}
+        for line in dashboard_login_path.read_text(encoding="utf-8").splitlines():
+            key, _, value = line.partition(":")
+            values[key.strip().lower()] = value.strip()
+        if values.get("username") == username and values.get("password"):
+            return values["password"]
+    except Exception:
+        return None
+    return None
+
+
+def write_dashboard_password(username, password):
+    dashboard_login_path.write_text(
+        "\n".join(
+            [
+                "Hermes dashboard login",
+                "URL: http://hermes-agent.dappnode:8080/dashboard",
+                f"Username: {username}",
+                f"Password: {password}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    dashboard_login_path.chmod(0o600)
+
+
+def has_whatsapp_creds(profile_home):
+    candidates = [
+        profile_home / "platforms" / "whatsapp" / "session" / "creds.json",
+        profile_home / "whatsapp" / "session" / "creds.json",
+    ]
+    return any(path.is_file() for path in candidates)
+
+
+def configure_dashboard_auth(config):
+    if skip_dashboard_auth:
+        return False
+
+    dashboard = config.setdefault("dashboard", {})
+    basic = dashboard.setdefault("basic_auth", {})
+
+    username = str(basic.get("username") or "").strip() or "dappnode"
+    basic["username"] = username
+
+    if not str(basic.get("secret") or "").strip():
+        basic["secret"] = secrets.token_urlsafe(32)
+
+    if str(basic.get("password_hash") or "").strip() or str(basic.get("password") or "").strip():
+        return False
+
+    password = read_dashboard_password(username) or secrets.token_urlsafe(24)
+
+    try:
+        from plugins.dashboard_auth.basic import hash_password
+
+        basic["password_hash"] = hash_password(password)
+        basic["password"] = ""
+    except Exception:
+        # The bundled provider can hash plaintext at load time. This fallback
+        # keeps the dashboard gated even if the helper import moves upstream.
+        basic["password"] = password
+
+    write_dashboard_password(username, password)
+    return True
 
 try:
     with open(config_path) as f:
@@ -55,17 +129,27 @@ cui.setdefault("dangerouslyDisableDeviceAuth", True)
 term = config.setdefault("terminal", {})
 term["cwd"] = os.environ.get("HERMES_HOME", "/opt/data")
 
+generated_dashboard_auth = configure_dashboard_auth(config)
+
 platforms = config.setdefault("platforms", {})
 if isinstance(platforms, dict):
     whatsapp = platforms.setdefault("whatsapp", {})
     if isinstance(whatsapp, dict):
+        if not has_whatsapp_creds(hermes_home):
+            whatsapp["enabled"] = False
+        else:
+            whatsapp.setdefault("enabled", False)
         extra = whatsapp.setdefault("extra", {})
         if isinstance(extra, dict) and extra.get("bridge_port") in (None, 3000, "3000"):
             extra["bridge_port"] = 3010
 
 with open(config_path, "w") as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-print("Patched config.yaml for DAppNode (api_port=3000, whatsapp_bridge_port=3010)")
+dashboard_auth_status = "skipped" if skip_dashboard_auth else "basic"
+msg = f"Patched config.yaml for DAppNode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
+if generated_dashboard_auth:
+    msg += "; dashboard credentials saved to /opt/data/dashboard-login.txt"
+print(msg)
 
 # --- Nexus context length: source the real value from /v1/models ---
 # nexus-api.dappnode.com is not in Hermes' URL-to-provider map, so the agent

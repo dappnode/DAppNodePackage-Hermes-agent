@@ -10,7 +10,12 @@ const PORT = 8080;
 const HERMES_HOME = process.env.HERMES_HOME || "/opt/data";
 const CONFIG_FILE = path.join(HERMES_HOME, "config.yaml");
 const ENV_FILE = path.join(HERMES_HOME, ".env");
+const DASHBOARD_LOGIN_FILE = path.join(HERMES_HOME, "dashboard-login.txt");
 const HTML_FILE = path.join(__dirname, "index.html");
+const DASHBOARD_INTERNAL_PORT = Number(process.env.HERMES_DASHBOARD_PORT || 8081);
+const DASHBOARD_PUBLIC_URL = process.env.DAPPNODE_DASHBOARD_URL
+  || "http://hermes-agent.dappnode:8081/";
+const DASHBOARD_LOGIN_URL = new URL("login?next=%2F", DASHBOARD_PUBLIC_URL).toString();
 
 const OLLAMA_CANDIDATES = [
   "http://ollama.ollama-nvidia-openwebui.dappnode:11434",
@@ -95,6 +100,85 @@ function readConfig() {
 function readEnv() {
   try { return parseEnvFile(fs.readFileSync(ENV_FILE, "utf-8")); }
   catch { return {}; }
+}
+
+function readDashboardCredentials() {
+  try {
+    const values = {};
+    const content = fs.readFileSync(DASHBOARD_LOGIN_FILE, "utf-8");
+    for (const line of content.split("\n")) {
+      const colon = line.indexOf(":");
+      if (colon < 1) continue;
+      const key = line.slice(0, colon).trim().toLowerCase();
+      values[key] = line.slice(colon + 1).trim();
+    }
+    const username = values.username || "";
+    const password = values.password || "";
+    return {
+      available: Boolean(username && password),
+      username,
+      password,
+    };
+  } catch {
+    return { available: false, username: "", password: "" };
+  }
+}
+
+function hasDashboardSession(cookieHeader) {
+  return /(?:^|;\s*)(?:__Host-|__Secure-)?hermes_session_(?:at|rt)=/.test(cookieHeader || "");
+}
+
+function requestDashboardSession(credentials) {
+  const body = Buffer.from(JSON.stringify({
+    provider: "basic",
+    username: credentials.username,
+    password: credentials.password,
+    next: "/",
+  }));
+
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      hostname: "127.0.0.1",
+      port: DASHBOARD_INTERNAL_PORT,
+      path: "/auth/password-login",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": body.length,
+      },
+    }, (response) => {
+      const cookies = response.headers["set-cookie"] || [];
+      response.resume();
+      response.on("end", () => {
+        if (response.statusCode === 200 && cookies.length > 0) {
+          resolve(cookies);
+          return;
+        }
+        const error = new Error(`dashboard login returned HTTP ${response.statusCode}`);
+        error.dashboardResponded = true;
+        error.statusCode = response.statusCode;
+        reject(error);
+      });
+    });
+
+    request.setTimeout(2000, () => request.destroy(new Error("dashboard login timed out")));
+    request.on("error", reject);
+    request.end(body);
+  });
+}
+
+async function createDashboardSession(credentials) {
+  let lastError;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      return await requestDashboardSession(credentials);
+    } catch (error) {
+      lastError = error;
+      if (error.dashboardResponded) throw error;
+      if (attempt < 19) await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  throw lastError;
 }
 
 async function probeOllama() {
@@ -194,12 +278,48 @@ function getHermesStatus() {
 }
 
 const server = http.createServer(async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("X-Content-Type-Options", "nosniff");
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
   const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  // Create a dashboard session server-side and hand its HttpOnly cookies to
+  // the browser. Cookies are scoped to the hostname, not the port, so they are
+  // valid when the browser follows the redirect from :8080 to :8081.
+  if (req.method === "GET" && url.pathname === "/dashboard") {
+    res.setHeader("Cache-Control", "no-store");
+    if (hasDashboardSession(req.headers.cookie)) {
+      res.writeHead(302, { "Location": DASHBOARD_PUBLIC_URL });
+      res.end();
+      return;
+    }
+
+    const credentials = readDashboardCredentials();
+    if (!credentials.available) {
+      res.writeHead(302, { "Location": DASHBOARD_LOGIN_URL });
+      res.end();
+      return;
+    }
+
+    try {
+      const cookies = await createDashboardSession(credentials);
+      res.writeHead(302, {
+        "Location": DASHBOARD_PUBLIC_URL,
+        "Set-Cookie": cookies,
+      });
+      res.end();
+    } catch (error) {
+      console.error("Dashboard session bootstrap failed:", error.message);
+      if (error.statusCode === 401 || error.statusCode === 404) {
+        res.writeHead(302, { "Location": DASHBOARD_LOGIN_URL });
+        res.end();
+        return;
+      }
+      res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Hermes dashboard is not ready yet. Try again shortly.");
+    }
+    return;
+  }
 
   // Serve the main HTML
   if (req.method === "GET" && url.pathname === "/") {

@@ -81,6 +81,26 @@
       border-bottom-color: var(--primary);
     }
 
+    @media (max-width: 540px) {
+      .topnav {
+        gap: 8px;
+        padding: 0 12px;
+      }
+
+      .topnav .logo {
+        font-size: 0.9rem;
+      }
+
+      .topnav .tabs {
+        margin-left: 0;
+      }
+
+      .topnav .tab {
+        padding: 1rem 0.65rem;
+        font-size: 0.78rem;
+      }
+    }
+
     /* ---- Tab Content ---- */
     .tab-content {
       display: none;
@@ -589,6 +609,10 @@
           Web Terminal
           <small>Run hermes CLI commands — hermes model, hermes doctor, hermes config, etc.</small>
         </a>
+        <a href="/dashboard" target="_blank">
+          Hermes Dashboard
+          <small>Open the agent dashboard</small>
+        </a>
         <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
           Health Check
           <small>Verify the API server is running</small>
@@ -650,13 +674,14 @@
           <div class="hint">Connects via the built-in Baileys bridge.</div>
           <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
             <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
-            Enable WhatsApp
+            Configure WhatsApp pairing
           </label>
           <div id="whatsapp-pair-notice"
             style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
             <strong style="color:var(--primary);">→ Pairing required</strong><br>
             After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a
-            mode and pair via QR code. You will need to manually restart the package after pairing to apply the changes.
+            mode and pair via QR code. Hermes enables WhatsApp only after pairing succeeds. You will need to manually
+            restart the package after pairing to apply the changes.
             <br><br>
           </div>
         </div>
@@ -1197,7 +1222,6 @@
         if (tgUsers) env.TELEGRAM_ALLOWED_USERS = tgUsers;
       }
       if (document.getElementById("whatsapp-enabled").checked) {
-        env.WHATSAPP_ENABLED = "true";
         const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
         if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
       }
@@ -1265,7 +1289,7 @@
       lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
       lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
       lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
-      lines.push("", "# Platform settings (DAppNode)", "platforms:", "  whatsapp:", "    extra:", "      bridge_port: 3010");
+      lines.push("", "# Platform settings (DAppNode)", "platforms:", "  whatsapp:", "    enabled: false", "    extra:", "      bridge_port: 3010");
       lines.push("", "terminal:", '  backend: "local"', '  cwd: "."', "  timeout: 180");
       lines.push("", "agent:", "  max_turns: 60", '  reasoning_effort: "medium"');
       lines.push("", "memory:", "  memory_enabled: true", "  user_profile_enabled: true");
