@@ -702,6 +702,16 @@
         <h2>Integrations</h2>
         <div class="subtitle">Optional — skip any you don't need.</div>
         <div class="field">
+          <label>Dashboard Username</label>
+          <div class="hint">Used for the Hermes Dashboard login.</div>
+          <input type="text" id="dashboard-username" value="dappnode" autocomplete="username" placeholder="dappnode">
+        </div>
+        <div class="field">
+          <label>Dashboard Password</label>
+          <div class="hint">Leave blank to keep the current dashboard password.</div>
+          <input type="password" id="dashboard-password" autocomplete="new-password" placeholder="Set a dashboard password">
+        </div>
+        <div class="field">
           <label>Telegram Bot Token <span class="optional-badge">optional</span></label>
           <div class="hint">From <strong>@BotFather</strong> on Telegram.</div>
           <input type="text" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNO...">
@@ -825,6 +835,22 @@
     // =========================================================================
     let _dashboardPollTimer = null;
 
+    function dashboardUsernameFromConfig(raw, env) {
+      const fromEnv = (env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "").trim();
+      if (fromEnv) return fromEnv;
+      const match = String(raw || "").match(/basic_auth:\s*[\s\S]*?username:\s*["']?([^"'\n]+)/);
+      return match ? match[1].trim() : "dappnode";
+    }
+
+    function hydrateDashboardAuthFields(raw, env) {
+      existingEnv = env || {};
+      existingDashboardUsername = dashboardUsernameFromConfig(raw, existingEnv);
+      const usernameEl = document.getElementById("dashboard-username");
+      if (usernameEl && !dashboardUsernameTouched) {
+        usernameEl.value = existingDashboardUsername;
+      }
+    }
+
     async function refreshDashboard() {
       try {
         const resp = await fetch("/api/health");
@@ -856,6 +882,7 @@
         const data = await resp.json();
         const env = data.env || {};
         const raw = data.config || "";
+        hydrateDashboardAuthFields(raw, env);
         const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
         const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
         document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
@@ -903,6 +930,9 @@
     let selectedProvider = null;
     let openRouterModels = [];
     let nexusModels = [];
+    let existingEnv = {};
+    let existingDashboardUsername = "";
+    let dashboardUsernameTouched = false;
 
     // =========================================================================
     // Render provider cards
@@ -929,6 +959,9 @@
 
     document.getElementById("telegram-token").addEventListener("input", (e) => {
       document.getElementById("telegram-users-field").style.display = e.target.value.trim() ? "block" : "none";
+    });
+    document.getElementById("dashboard-username").addEventListener("input", () => {
+      dashboardUsernameTouched = true;
     });
     document.getElementById("whatsapp-enabled").addEventListener("change", (e) => {
       document.getElementById("whatsapp-users-field").style.display = e.target.checked ? "block" : "none";
@@ -1304,6 +1337,24 @@
       return base.endsWith("/v1") ? base : base + "/v1";
     }
 
+    function buildDashboardAuthEnv() {
+      const env = {};
+      const username = (document.getElementById("dashboard-username")?.value || "").trim();
+      const password = (document.getElementById("dashboard-password")?.value || "").trim();
+      if (username) env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME = username;
+      if (password) env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD = password;
+      return env;
+    }
+
+    function dashboardAuthChanged() {
+      const dashboardEnv = buildDashboardAuthEnv();
+      const username = dashboardEnv.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "";
+      return Boolean(
+        dashboardEnv.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+        || (username && username !== existingDashboardUsername)
+      );
+    }
+
     function buildEnv() {
       const env = {};
       const p = selectedProvider;
@@ -1347,6 +1398,7 @@
         const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
         if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
       }
+      Object.assign(env, buildDashboardAuthEnv());
       return env;
     }
 
@@ -1425,7 +1477,9 @@
       const yaml = buildConfigYaml();
       const envLines = [];
       for (const [k, v] of Object.entries(env)) {
-        if (k.includes("KEY") || k.includes("TOKEN") || k.includes("SECRET")) {
+        if (k.includes("PASSWORD")) {
+          envLines.push(`${k}=${"*".repeat(Math.max(8, v.length))}`);
+        } else if (k.includes("KEY") || k.includes("TOKEN") || k.includes("SECRET")) {
           envLines.push(`${k}=${v.slice(0, 8)}${"*".repeat(Math.max(0, v.length - 8))}`);
         } else { envLines.push(`${k}=${v}`); }
       }
@@ -1442,7 +1496,12 @@
       const btn = document.getElementById("btn-save");
       btn.disabled = true; btn.textContent = "Saving...";
       const env = buildEnv();
-      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED);
+      if (env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD && !env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME) {
+        alert("Dashboard username is required when setting a dashboard password.");
+        btn.disabled = false; btn.textContent = "Save Configuration";
+        return;
+      }
+      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED || dashboardAuthChanged());
       try {
         const resp = await fetch("/api/config", {
           method: "POST",

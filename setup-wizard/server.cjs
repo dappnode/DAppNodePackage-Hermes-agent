@@ -16,11 +16,10 @@ const HTML_FILE = path.join(__dirname, "index.html");
 const DASHBOARD_INTERNAL_PORT = Number(process.env.HERMES_DASHBOARD_PORT || 8081);
 const DASHBOARD_PUBLIC_URL = process.env.DAPPNODE_DASHBOARD_URL
   || "http://hermes-agent.dappnode:8081/";
-const DASHBOARD_LOGIN_URL = new URL("login?next=%2F", DASHBOARD_PUBLIC_URL).toString();
 const NEXUS_AUTHGEAR_ENDPOINT = (process.env.NEXUS_AUTHGEAR_ENDPOINT || "https://nexus-auth.dappnode.com").replace(/\/+$/, "");
 const NEXUS_AUTHGEAR_CLIENT_ID = process.env.NEXUS_AUTHGEAR_CLIENT_ID || "986265c5bcad52f7";
 const NEXUS_CONTROL_PLANE_URL = (process.env.NEXUS_CONTROL_PLANE_URL || "https://nexus-cp.dappnode.com").replace(/\/+$/, "");
-const NEXUS_API_KEY_NAME = process.env.NEXUS_API_KEY_NAME || "Hermes Agent Dappnode";
+const NEXUS_API_KEY_NAME = process.env.NEXUS_API_KEY_NAME || "EVMcrispr Chat";
 const NEXUS_AUTH_RESULT_TTL = 10 * 60 * 1000;
 
 const OLLAMA_CANDIDATES = [
@@ -213,6 +212,17 @@ function readEnv() {
 }
 
 function readDashboardCredentials() {
+  const env = readEnv();
+  const envUsername = env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "";
+  const envPassword = env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD || "";
+  if (envUsername && envPassword) {
+    return {
+      available: true,
+      username: envUsername,
+      password: envPassword,
+    };
+  }
+
   try {
     const values = {};
     const content = fs.readFileSync(DASHBOARD_LOGIN_FILE, "utf-8");
@@ -232,6 +242,24 @@ function readDashboardCredentials() {
   } catch {
     return { available: false, username: "", password: "" };
   }
+}
+
+function dashboardBootstrapHelp(res, status, reason) {
+  res.writeHead(status, {
+    "Cache-Control": "no-store",
+    "Content-Type": "text/plain; charset=utf-8",
+  });
+  res.end([
+    "Hermes dashboard auto-login is not ready.",
+    "",
+    reason,
+    "",
+    "Use the setup wizard at http://hermes-agent.dappnode:8080 to set a dashboard username and password.",
+    "Save the configuration, restart the Hermes Agent package, then open:",
+    "http://hermes-agent.dappnode:8080/dashboard",
+    "",
+    "The raw dashboard on port 8081 is intentionally password protected.",
+  ].join("\n"));
 }
 
 function hasDashboardSession(cookieHeader) {
@@ -485,8 +513,11 @@ const server = http.createServer(async (req, res) => {
 
     const credentials = readDashboardCredentials();
     if (!credentials.available) {
-      res.writeHead(302, { "Location": DASHBOARD_LOGIN_URL });
-      res.end();
+      dashboardBootstrapHelp(
+        res,
+        503,
+        "Dashboard credentials are not configured yet."
+      );
       return;
     }
 
@@ -500,8 +531,11 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       console.error("Dashboard session bootstrap failed:", error.message);
       if (error.statusCode === 401 || error.statusCode === 404) {
-        res.writeHead(302, { "Location": DASHBOARD_LOGIN_URL });
-        res.end();
+        dashboardBootstrapHelp(
+          res,
+          502,
+          "The saved dashboard credentials were rejected. Set a fresh dashboard password in the setup wizard."
+        );
         return;
       }
       res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
@@ -558,6 +592,13 @@ const server = http.createServer(async (req, res) => {
       const incoming = JSON.parse(body);
       if (incoming.env && typeof incoming.env === "object") {
         const currentEnv = readEnv();
+        if (
+          (incoming.env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || incoming.env.HERMES_DASHBOARD_BASIC_AUTH_PASSWORD)
+          && !currentEnv.HERMES_DASHBOARD_BASIC_AUTH_SECRET
+          && !incoming.env.HERMES_DASHBOARD_BASIC_AUTH_SECRET
+        ) {
+          incoming.env.HERMES_DASHBOARD_BASIC_AUTH_SECRET = crypto.randomBytes(32).toString("base64");
+        }
         const merged = Object.assign(currentEnv, incoming.env);
         fs.mkdirSync(HERMES_HOME, { recursive: true });
         fs.writeFileSync(ENV_FILE, serializeEnv(merged), "utf-8");
