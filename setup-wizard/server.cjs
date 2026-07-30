@@ -4,6 +4,7 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { execFile } = require("node:child_process");
 
 const PORT = 8080;
@@ -16,6 +17,11 @@ const DASHBOARD_INTERNAL_PORT = Number(process.env.HERMES_DASHBOARD_PORT || 8081
 const DASHBOARD_PUBLIC_URL = process.env.DAPPNODE_DASHBOARD_URL
   || "http://hermes-agent.dappnode:8081/";
 const DASHBOARD_LOGIN_URL = new URL("login?next=%2F", DASHBOARD_PUBLIC_URL).toString();
+const NEXUS_AUTHGEAR_ENDPOINT = (process.env.NEXUS_AUTHGEAR_ENDPOINT || "https://nexus-auth.dappnode.com").replace(/\/+$/, "");
+const NEXUS_AUTHGEAR_CLIENT_ID = process.env.NEXUS_AUTHGEAR_CLIENT_ID || "986265c5bcad52f7";
+const NEXUS_CONTROL_PLANE_URL = (process.env.NEXUS_CONTROL_PLANE_URL || "https://nexus-cp.dappnode.com").replace(/\/+$/, "");
+const NEXUS_API_KEY_NAME = process.env.NEXUS_API_KEY_NAME || "Hermes Agent Dappnode";
+const NEXUS_AUTH_RESULT_TTL = 10 * 60 * 1000;
 
 const OLLAMA_CANDIDATES = [
   "http://ollama-cpu.dappnode:11434",
@@ -34,6 +40,8 @@ const CACHE_TTL = 6 * 60 * 60 * 1000;
 // In-memory cache for Nexus models (refresh every 1 hour — models change less often)
 let nexusCache = { models: [], ts: 0 };
 const NEXUS_CACHE_TTL = 60 * 60 * 1000;
+const nexusAuthStates = new Map();
+const nexusAuthResults = new Map();
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -47,6 +55,104 @@ function readBody(req) {
 function json(res, status, data) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
+}
+
+function base64Url(buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function randomBase64Url(bytes) {
+  return base64Url(crypto.randomBytes(bytes));
+}
+
+function firstHeaderValue(value) {
+  return String(value || "").split(",")[0].trim();
+}
+
+function requestOrigin(req) {
+  const forwardedProto = firstHeaderValue(req.headers["x-forwarded-proto"]);
+  const proto = forwardedProto === "https" || forwardedProto === "http" ? forwardedProto : "http";
+  const host = firstHeaderValue(req.headers["x-forwarded-host"]) || req.headers.host || "hermes-agent.dappnode:8080";
+  return `${proto}://${host}`;
+}
+
+function nexusRedirectUri(req) {
+  return process.env.NEXUS_AUTH_REDIRECT_URI || `${requestOrigin(req)}/nexus/auth/callback`;
+}
+
+function sanitizeReturnTo(value) {
+  if (!value || value.length > 2000 || !value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
+
+function withReturnParams(returnTo, params) {
+  const out = new URL(sanitizeReturnTo(returnTo), "http://hermes-agent.dappnode");
+  for (const [key, value] of Object.entries(params)) {
+    if (value) out.searchParams.set(key, value);
+  }
+  return `${out.pathname}${out.search}${out.hash}`;
+}
+
+function pruneNexusAuthMaps() {
+  const now = Date.now();
+  for (const [id, value] of nexusAuthStates) {
+    if (value.expiresAt < now) nexusAuthStates.delete(id);
+  }
+  for (const [id, value] of nexusAuthResults) {
+    if (value.expiresAt < now) nexusAuthResults.delete(id);
+  }
+}
+
+async function exchangeNexusCode(code, state) {
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: NEXUS_AUTHGEAR_CLIENT_ID,
+    code,
+    redirect_uri: state.redirectUri,
+    code_verifier: state.codeVerifier,
+  });
+
+  const resp = await fetch(`${NEXUS_AUTHGEAR_ENDPOINT}/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+    signal: AbortSignal.timeout(15000),
+  });
+  const text = await resp.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+  if (!resp.ok) {
+    throw new Error(data.error_description || data.error || `Authgear token exchange failed (${resp.status})`);
+  }
+  if (!data.access_token) throw new Error("Authgear did not return an access token");
+  return data.access_token;
+}
+
+async function createNexusApiKey(accessToken) {
+  const resp = await fetch(`${NEXUS_CONTROL_PLANE_URL}/user/apikeys`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: NEXUS_API_KEY_NAME,
+      pii_mode: "balanced",
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const text = await resp.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+  if (!resp.ok) {
+    throw new Error(data.error?.message || data.message || `Nexus API key creation failed (${resp.status})`);
+  }
+  if (!data.raw_key) throw new Error("Nexus did not return a raw API key");
+  return data.raw_key;
 }
 
 /**
@@ -287,6 +393,85 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
+  // Start Nexus Authgear login. The callback URI must be authorized in the
+  // Authgear application. For the DAppNode setup wizard this is normally:
+  // http://hermes-agent.dappnode:8080/nexus/auth/callback
+  // Set NEXUS_AUTH_REDIRECT_URI only when serving the wizard through a proxy.
+  if (req.method === "GET" && url.pathname === "/nexus/auth/start") {
+    pruneNexusAuthMaps();
+    const stateId = randomBase64Url(32);
+    const codeVerifier = randomBase64Url(64);
+    const codeChallenge = base64Url(crypto.createHash("sha256").update(codeVerifier).digest());
+    const redirectUri = nexusRedirectUri(req);
+    const returnTo = sanitizeReturnTo(url.searchParams.get("returnTo") || "/");
+
+    nexusAuthStates.set(stateId, {
+      codeVerifier,
+      redirectUri,
+      returnTo,
+      expiresAt: Date.now() + NEXUS_AUTH_RESULT_TTL,
+    });
+
+    const authUrl = new URL(`${NEXUS_AUTHGEAR_ENDPOINT}/oauth2/authorize`);
+    authUrl.searchParams.set("client_id", NEXUS_AUTHGEAR_CLIENT_ID);
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("redirect_uri", redirectUri);
+    authUrl.searchParams.set("scope", "openid email profile offline_access");
+    authUrl.searchParams.set("state", stateId);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+    authUrl.searchParams.set("prompt", "login");
+
+    res.writeHead(302, { "Location": authUrl.toString() });
+    res.end();
+    return;
+  }
+
+  // Finish Nexus Authgear login, create a user API key through Nexus control
+  // plane, and stash it for one same-origin fetch by the wizard UI.
+  if (req.method === "GET" && url.pathname === "/nexus/auth/callback") {
+    pruneNexusAuthMaps();
+    const stateId = url.searchParams.get("state") || "";
+    const state = nexusAuthStates.get(stateId);
+    const fallbackReturnTo = state ? state.returnTo : "/";
+    const fail = (message) => {
+      res.writeHead(302, { "Location": withReturnParams(fallbackReturnTo, { nexus_auth: "error", nexus_message: message }) });
+      res.end();
+    };
+
+    if (url.searchParams.get("error")) {
+      fail(url.searchParams.get("error_description") || "Nexus login was cancelled");
+      return;
+    }
+    if (!state || state.expiresAt < Date.now()) {
+      fail("Nexus login expired. Please try again.");
+      return;
+    }
+    nexusAuthStates.delete(stateId);
+
+    const code = url.searchParams.get("code") || "";
+    if (!code) {
+      fail("Nexus login did not return an authorization code.");
+      return;
+    }
+
+    try {
+      const accessToken = await exchangeNexusCode(code, state);
+      const apiKey = await createNexusApiKey(accessToken);
+      const resultId = randomBase64Url(24);
+      nexusAuthResults.set(resultId, {
+        apiKey,
+        expiresAt: Date.now() + NEXUS_AUTH_RESULT_TTL,
+      });
+      res.writeHead(302, { "Location": withReturnParams(state.returnTo, { nexus_auth: "connected", nexus_result: resultId }) });
+      res.end();
+    } catch (error) {
+      console.error("Nexus login failed:", error.message);
+      fail(error.message || "Nexus login failed");
+    }
+    return;
+  }
+
   // Create a dashboard session server-side and hand its HttpOnly cookies to
   // the browser. Cookies are scoped to the hostname, not the port, so they are
   // valid when the browser follows the redirect from :8080 to :8081.
@@ -326,7 +511,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Serve the main HTML
-  if (req.method === "GET" && url.pathname === "/") {
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/nexus" || url.pathname === "/nexus/")) {
     try {
       const html = fs.readFileSync(HTML_FILE, "utf-8");
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -334,6 +519,26 @@ const server = http.createServer(async (req, res) => {
     } catch {
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end("Failed to load page");
+    }
+    return;
+  }
+
+  // Consume the one-time Nexus API key result generated by /nexus/auth/callback.
+  if (req.method === "POST" && url.pathname === "/api/nexus/auth/result") {
+    try {
+      pruneNexusAuthMaps();
+      const body = await readBody(req);
+      const incoming = JSON.parse(body || "{}");
+      const id = typeof incoming.id === "string" ? incoming.id : "";
+      const result = id ? nexusAuthResults.get(id) : null;
+      if (!result || result.expiresAt < Date.now()) {
+        json(res, 404, { error: "Nexus login result expired. Please log in again." });
+        return;
+      }
+      nexusAuthResults.delete(id);
+      json(res, 200, { apiKey: result.apiKey });
+    } catch (err) {
+      json(res, 400, { error: err.message });
     }
     return;
   }

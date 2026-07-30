@@ -515,6 +515,48 @@
       color: var(--error);
     }
 
+    .nexus-auth-panel {
+      background: rgba(255, 215, 0, 0.08);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .nexus-auth-panel .btn {
+      width: 100%;
+    }
+
+    .nexus-auth-note {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      margin-top: 0.75rem;
+    }
+
+    .nexus-auth-result {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .nexus-auth-result.ok {
+      display: block;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--success);
+    }
+
+    .nexus-auth-result.fail {
+      display: block;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--error);
+    }
+
     .config-preview {
       background: var(--card);
       border: 1px solid var(--border);
@@ -974,10 +1016,15 @@
       if (p.id === "nexus") {
         container.innerHTML = `
           <h2>Configure DAppNode Nexus</h2>
-          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training. <a href="https://nexus.dappnode.com" target="_blank" style="color:var(--primary)">Sign up &amp; get your API key &rarr;</a></div>
+          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
+          <div class="nexus-auth-panel">
+            <button class="btn btn-primary" id="nexus-login-btn" onclick="startNexusLogin()">Login with Nexus &amp; create API key</button>
+            <div class="nexus-auth-note">Creates a Nexus API key for this Hermes Agent account and fills it below. <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">Manage your keys</a>.</div>
+            <div class="nexus-auth-result" id="nexus-auth-result"></div>
+          </div>
           <div class="field">
             <label>Nexus API Key</label>
-            <div class="hint">Sign up at <strong>nexus.dappnode.com</strong> and create an API key from your dashboard.</div>
+            <div class="hint">Use Nexus login above, or paste a key from <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">nexus.dappnode.com/api-keys</a>.</div>
             <input type="password" id="api-key" placeholder="Paste your Nexus API key here">
           </div>
           <div class="field">
@@ -1142,6 +1189,75 @@
         // Pre-select DeepSeek V4 Pro if available, otherwise first model
         const ds = suggestions.find(m => m.id === "deepseek/deepseek-v4-pro");
         inp.value = ds ? ds.id : suggestions[0].id;
+      }
+    }
+
+    function showNexusAuthResult(kind, message) {
+      const el = document.getElementById("nexus-auth-result");
+      if (!el) return;
+      el.textContent = message;
+      el.className = "nexus-auth-result " + (kind === "ok" ? "ok" : "fail");
+    }
+
+    function removeNexusAuthParams() {
+      const next = new URL(window.location.href);
+      for (const key of ["nexus_auth", "nexus_message", "nexus_result"]) {
+        next.searchParams.delete(key);
+      }
+      window.history.replaceState(null, "", next.pathname + next.search + next.hash);
+    }
+
+    function startNexusLogin() {
+      const btn = document.getElementById("nexus-login-btn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Opening Nexus login...";
+      }
+      const current = new URL(window.location.href);
+      for (const key of ["nexus_auth", "nexus_message", "nexus_result"]) {
+        current.searchParams.delete(key);
+      }
+      const returnTo = current.pathname + current.search + current.hash;
+      window.location.href = "/nexus/auth/start?returnTo=" + encodeURIComponent(returnTo || "/");
+    }
+
+    async function handleNexusAuthRedirect() {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get("nexus_auth");
+      if (!status) return;
+
+      switchTab("setup");
+      selectProviderCard("nexus");
+      goTo(1);
+
+      try {
+        if (status === "error") {
+          showNexusAuthResult("fail", params.get("nexus_message") || "Nexus login failed. Please try again.");
+          return;
+        }
+
+        const resultId = params.get("nexus_result");
+        if (!resultId) {
+          showNexusAuthResult("fail", "Nexus login finished without an API key result. Please try again.");
+          return;
+        }
+
+        showNexusAuthResult("ok", "Creating Nexus API key...");
+        const resp = await fetch("/api/nexus/auth/result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: resultId }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || "Could not retrieve the generated Nexus API key");
+
+        const input = document.getElementById("api-key");
+        if (input) input.value = data.apiKey || "";
+        showNexusAuthResult("ok", "Nexus API key created. Choose a model and continue.");
+      } catch (err) {
+        showNexusAuthResult("fail", err.message || "Nexus login failed. Please try again.");
+      } finally {
+        removeNexusAuthParams();
       }
     }
 
@@ -1348,6 +1464,8 @@
         btn.disabled = false; btn.textContent = "Save Configuration";
       }
     }
+
+    handleNexusAuthRedirect();
   </script>
 </body>
 
