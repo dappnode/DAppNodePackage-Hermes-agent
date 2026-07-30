@@ -18,6 +18,10 @@ const DASHBOARD_PUBLIC_URL = process.env.DAPPNODE_DASHBOARD_URL
 const DASHBOARD_LOGIN_URL = new URL("login?next=%2F", DASHBOARD_PUBLIC_URL).toString();
 
 const OLLAMA_CANDIDATES = [
+  "http://ollama-cpu.dappnode:11434",
+  "http://ollama-nvidia.dappnode:11434",
+  "http://ollama-amd.dappnode:11434",
+  "http://ollama.dappnode:11434",
   "http://ollama.ollama-nvidia-openwebui.dappnode:11434",
   "http://ollama.ollama-amd-openwebui.dappnode:11434",
   "http://ollama.ollama-cpu-openwebui.dappnode:11434",

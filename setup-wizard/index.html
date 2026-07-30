@@ -1001,7 +1001,7 @@
           <div class="field">
             <label>Ollama Server URL</label>
             <div class="hint">If auto-detect doesn't find it, enter the URL manually.</div>
-            <input type="text" id="ollama-url" placeholder="http://ollama.dappnode:11434">
+            <input type="text" id="ollama-url" placeholder="http://ollama-cpu.dappnode:11434">
           </div>
           <div class="field">
             <label>Model</label>
@@ -1182,6 +1182,12 @@
       return null;
     }
 
+    function toOpenAiBaseUrl(url) {
+      const raw = (url || "").trim();
+      const base = (raw || "http://ollama-cpu.dappnode:11434").replace(/\/+$/, "");
+      return base.endsWith("/v1") ? base : base + "/v1";
+    }
+
     function buildEnv() {
       const env = {};
       const p = selectedProvider;
@@ -1192,8 +1198,8 @@
         env.OPENAI_API_KEY = apiKey;
         env.LLM_MODEL = getModelValue() || "deepseek/deepseek-v4-pro";
       } else if (p.id === "ollama") {
-        const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
-        env.OPENAI_BASE_URL = url + "/v1";
+        const url = toOpenAiBaseUrl(document.getElementById("ollama-url").value);
+        env.OPENAI_BASE_URL = url;
         env.OPENAI_API_KEY = "ollama-local";
         env.LLM_MODEL = getModelValue() || "llama3";
       } else if (p.id === "custom") {
@@ -1257,10 +1263,10 @@
           lines.push(`  context_length: ${matched.context_length}`);
         }
       } else if (p.id === "ollama") {
-        const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
+        const url = toOpenAiBaseUrl(document.getElementById("ollama-url").value);
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
         lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "${url}/v1"`);
+        lines.push(`  base_url: "${url}"`);
       } else if (p.id === "custom") {
         const spec = document.getElementById("custom-spec").value;
         const baseUrl = (document.getElementById("custom-base-url").value || "").trim();
