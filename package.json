@@ -1,0 +1,20 @@
+{
+  "name": "dappnode-package-hermes-agent",
+  "version": "0.1.7",
+  "description": "DAppNode package wrapper for Hermes Agent by Nous Research",
+  "private": true,
+  "scripts": {
+    "start": "node setup-wizard/server.cjs",
+    "test:node": "node --test test/*.test.js",
+    "test:python": "python3 -m unittest discover -s test -p \"test_*.py\"",
+    "test": "npm run test:node && npm run test:python"
+  },
+  "keywords": [
+    "dappnode",
+    "hermes-agent",
+    "ai",
+    "llm"
+  ],
+  "author": "DAppNode Association <admin@dappnode.io>",
+  "license": "MIT"
+}

@@ -75,7 +75,10 @@ def write_env(path: Path, lines: list[str], updates: dict[str, str]) -> None:
             out.append(f"{key}={value}")
 
     path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
-    path.chmod(0o600)
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
 
 
 def has_usable_secret(value: str, min_length: int = 16) -> bool:
@@ -123,17 +126,21 @@ def repair_profile_env(profile_home: Path, *, is_default: bool) -> dict[str, str
     return env
 
 
-def iter_profile_homes() -> list[Path]:
-    profiles_root = HERMES_HOME / "profiles"
+def iter_profile_homes(hermes_home: Path = HERMES_HOME) -> list[Path]:
+    profiles_root = hermes_home / "profiles"
     if not profiles_root.is_dir():
         return []
     return sorted(path for path in profiles_root.iterdir() if path.is_dir())
 
 
-def main() -> None:
-    repair_profile_env(HERMES_HOME, is_default=True)
-    for profile_home in iter_profile_homes():
+def bootstrap_all(hermes_home: Path = HERMES_HOME) -> None:
+    repair_profile_env(hermes_home, is_default=True)
+    for profile_home in iter_profile_homes(hermes_home):
         repair_profile_env(profile_home, is_default=False)
+
+
+def main() -> None:
+    bootstrap_all(HERMES_HOME)
 
 
 if __name__ == "__main__":
