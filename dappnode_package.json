@@ -62,7 +62,8 @@
     "homepage": "https://hermes-agent.nousresearch.com",
     "setup": "http://hermes-agent.dappnode:8080",
     "terminal": "http://hermes-agent.dappnode:7681",
-    "ui": "http://hermes-agent.dappnode:8080/dashboard"
+    "ui": "http://hermes-agent.dappnode:8080/dashboard",
+    "verification": "http://nexus-local-proxy.dappnode.private:3301/verification"
   },
   "name": "hermes-agent.dnp.dappnode.eth",
   "repository": {
@@ -81,7 +82,7 @@
   "upstreamArg": "UPSTREAM_VERSION",
   "upstreamRepo": "NousResearch/hermes-agent",
   "upstreamVersion": "v2026.7.20",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "warnings": {
     "onRemove": "Removing this package will delete all your Hermes Agent configuration, conversation history, skills, memories, and cached data. Make sure to create a backup first."
   }

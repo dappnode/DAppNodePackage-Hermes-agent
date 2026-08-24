@@ -894,6 +894,28 @@
     // =========================================================================
     // Provider definitions
     // =========================================================================
+
+    // Nexus can be reached two ways. The direct endpoint terminates TLS at
+    // Cloudflare, so prompts are readable there. The local proxy verifies the
+    // Gateway's AWS Nitro attestation and encrypts bodies end-to-end past that
+    // point, at the cost of a hard dependency on nexus-local-proxy running.
+    const NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1";
+    const NEXUS_PROXY_BASE_URL = "http://nexus-local-proxy.dappnode.private:3301/v1";
+    const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-local-proxy.dappnode.private:3301/verification";
+
+    // Whether the private-proxy toggle is on. Read through a helper so a
+    // screen that has not rendered the checkbox yet still gets the default.
+    // Off by default: the proxy fails closed, so opting in should be a
+    // deliberate choice made after reading what it changes.
+    function nexusUseProxy() {
+      const el = document.getElementById("nexus-attested");
+      return el ? el.checked : false;
+    }
+
+    function nexusBaseUrl() {
+      return nexusUseProxy() ? NEXUS_PROXY_BASE_URL : NEXUS_DIRECT_BASE_URL;
+    }
+
     const PROVIDERS = [
       { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
@@ -1065,7 +1087,35 @@
             <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
             <div id="nexus-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from Nexus...</div></div>
           </div>
+          <div class="field">
+            <label>Private mode</label>
+            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus. Requires the <strong>nexus-local-proxy</strong> package installed and running on this DAppNode.</div>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+              <input type="checkbox" id="nexus-attested" style="width:auto;">
+              Route through the attested Nexus proxy on this DAppNode
+            </label>
+            <div id="nexus-attested-notice"
+              style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
+              <strong style="color:var(--primary);">&rarr; What this changes</strong><br>
+              Without it, your prompts travel to Nexus over ordinary HTTPS, which is decrypted at
+              Cloudflare before it reaches the Gateway. With it, the <strong>nexus-local-proxy</strong>
+              package on this DAppNode verifies that the Gateway is the expected code running inside an
+              AWS Nitro Enclave, and encrypts prompts and completions so Cloudflare cannot read them.
+              <br><br>
+              <strong style="color:var(--primary);">&rarr; The trade-off</strong><br>
+              This package does not install the proxy for you &mdash; install
+              <strong>nexus-local-proxy</strong> first, or leave this off. The proxy also
+              <strong>fails closed</strong>: if it cannot verify the Gateway it refuses to run,
+              and Hermes will report connection errors until it recovers &mdash; there is no silent
+              fallback to the unprotected path. Check
+              <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">the verification page</a>
+              to see the current verdict and the evidence behind it.
+            </div>
+          </div>
         `;
+        document.getElementById("nexus-attested").addEventListener("change", (e) => {
+          document.getElementById("nexus-attested-notice").style.display = e.target.checked ? "block" : "none";
+        });
         fetchNexusModels();
         return;
       }
@@ -1361,7 +1411,7 @@
       if (p.id === "nexus") {
         const apiKey = (document.getElementById("api-key").value || "").trim();
         if (apiKey) env.NEXUS_API_KEY = apiKey;
-        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
+        env.OPENAI_BASE_URL = nexusBaseUrl();
         env.OPENAI_API_KEY = apiKey;
         env.LLM_MODEL = getModelValue() || "deepseek/deepseek-v4-pro";
       } else if (p.id === "ollama") {
@@ -1413,7 +1463,7 @@
         const model = getModelValue() || "deepseek/deepseek-v4-pro";
         lines.push(`  default: "${model}"`);
         lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+        lines.push(`  base_url: "${nexusBaseUrl()}"`);
         // Hermes reads the key for a custom endpoint from model.api_key in
         // config.yaml (the documented source of truth). The NEXUS_API_KEY /
         // OPENAI_API_KEY env vars are not a reliable path: NEXUS_API_KEY is
