@@ -1089,7 +1089,7 @@
           </div>
           <div class="field">
             <label>Private mode</label>
-            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus. Requires the <strong>nexus-local-proxy</strong> package installed and running on this DAppNode.</div>
+            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus.</div>
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
               <input type="checkbox" id="nexus-attested" style="width:auto;">
               Route through the attested Nexus proxy on this DAppNode
@@ -1103,9 +1103,7 @@
               AWS Nitro Enclave, and encrypts prompts and completions so Cloudflare cannot read them.
               <br><br>
               <strong style="color:var(--primary);">&rarr; The trade-off</strong><br>
-              This package does not install the proxy for you &mdash; install
-              <strong>nexus-local-proxy</strong> first, or leave this off. The proxy also
-              <strong>fails closed</strong>: if it cannot verify the Gateway it refuses to run,
+              The proxy <strong>fails closed</strong>. If it cannot verify the Gateway it refuses to run,
               and Hermes will report connection errors until it recovers &mdash; there is no silent
               fallback to the unprotected path. Check
               <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">the verification page</a>
