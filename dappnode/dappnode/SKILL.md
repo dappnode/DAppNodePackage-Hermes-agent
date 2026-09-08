@@ -70,6 +70,20 @@ To configure, use the Setup Wizard at `http://hermes-agent.dappnode:8080` and se
 1. Sign up at `https://nexus.dappnode.com` and create an API key
 2. In the Setup Wizard or `config.yaml`, set the provider to Nexus with base URL `https://nexus-api.dappnode.com/v1`
 
+#### Verified TEE mode (optional)
+Nexus also runs a Gateway inside a trusted execution environment. In that mode prompts
+go to the **Nexus Local Proxy** package on this DAppNode instead of directly to the Nexus
+API. That proxy verifies the Gateway is running the exact software DAppNode published,
+inside genuine sealed hardware, before any prompt leaves the machine, and encrypts prompt
+and reply bodies to that enclave. If verification fails it refuses to carry traffic.
+
+Requires the **Nexus Local Proxy** package to be installed. Enable it with the "Verified
+TEE mode" toggle in the Setup Wizard, which switches the base URL to
+`http://nexus-local-proxy.dappnode.private:3301/v1`. The API key and model ID are
+unchanged. Check status at `http://nexus-local-proxy.dappnode.private:3301/verification`.
+
+Hermes speaks plain OpenAI HTTP either way; nothing else about the configuration differs.
+
 ## Troubleshooting
 
 ### Package Not Reachable

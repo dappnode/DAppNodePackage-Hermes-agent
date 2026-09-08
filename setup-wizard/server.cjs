@@ -12,6 +12,14 @@ const CONFIG_FILE = path.join(HERMES_HOME, "config.yaml");
 const ENV_FILE = path.join(HERMES_HOME, ".env");
 const HTML_FILE = path.join(__dirname, "index.html");
 
+// The Nexus Local Proxy is the only thing on a DAppNode that verifies the
+// Nexus Gateway's enclave attestation and encrypts prompt bodies to it. Hermes
+// never speaks that protocol itself: it points at the proxy and lets it do the
+// verifying, which is why TEE mode is a base-URL switch and nothing more.
+const NEXUS_TEE_BASE_URL = "http://nexus-local-proxy.dappnode.private:3301/v1";
+const NEXUS_STANDARD_BASE_URL = "https://nexus-api.dappnode.com/v1";
+const NEXUS_TEE_VERIFICATION_URL = "http://nexus-local-proxy.dappnode.private:3301/v1/verification";
+
 const OLLAMA_CANDIDATES = [
   "http://ollama.ollama-nvidia-openwebui.dappnode:11434",
   "http://ollama.ollama-amd-openwebui.dappnode:11434",
@@ -91,6 +99,46 @@ function readConfig() {
 function readEnv() {
   try { return parseEnvFile(fs.readFileSync(ENV_FILE, "utf-8")); }
   catch { return {}; }
+}
+
+// probeNexusProxy reports whether the local proxy is installed and has
+// verified the Gateway. It reads the proxy's own verification state rather
+// than attesting anything here: one verifier on the node, and everything else
+// reads its answer.
+async function probeNexusProxy() {
+  try {
+    const resp = await fetch(NEXUS_TEE_VERIFICATION_URL, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) {
+      return { reachable: true, verified: false, reason: `verification endpoint returned HTTP ${resp.status}` };
+    }
+    const data = await resp.json();
+    const current = data.current || {};
+    return {
+      reachable: true,
+      verified: data.status === "verified",
+      status: data.status || "unknown",
+      gateway: data.gateway || null,
+      sourceRevision: current.source_revision || null,
+      checks: Array.isArray(current.checks) ? current.checks.length : 0,
+      models: await fetchNexusModels(),
+    };
+  } catch {
+    return { reachable: false, verified: false, reason: "not installed or not running" };
+  }
+}
+
+// The proxy passes the Gateway's public model catalog through, so the wizard
+// can offer real model IDs instead of asking the user to copy one from a web
+// page. A failure here is not fatal: the model field stays free-text.
+async function fetchNexusModels() {
+  try {
+    const resp = await fetch(`${NEXUS_TEE_BASE_URL}/models`, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return (data.data || []).map((m) => m.id).filter(Boolean).sort();
+  } catch {
+    return [];
+  }
 }
 
 async function probeOllama() {
@@ -198,6 +246,13 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       json(res, 400, { error: err.message });
     }
+    return;
+  }
+
+  // Probe the Nexus Local Proxy
+  if (req.method === "GET" && url.pathname === "/api/nexus/probe") {
+    const result = await probeNexusProxy();
+    json(res, 200, result);
     return;
   }
 

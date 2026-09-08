@@ -398,6 +398,7 @@
         const raw = data.config || "";
         const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
         const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
+        nexusTeeEnabled = (env.OPENAI_BASE_URL || "").startsWith("http://nexus-local-proxy.dappnode.private:3301");
         document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
         document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
       } catch {}
@@ -554,11 +555,41 @@
             <input type="password" id="api-key" placeholder="Paste your Nexus API key here">
           </div>
           <div class="field">
+            <label>Verified TEE mode <span class="optional-badge">stronger privacy</span></label>
+            <div class="hint">
+              Sends prompts through the <strong>Nexus Local Proxy</strong> on this DAppNode instead of straight to the Nexus API.
+              The proxy checks the Gateway is running inside genuine sealed hardware, running the exact software DAppNode published, before
+              anything you type leaves this machine &mdash; and encrypts prompts and replies so nothing in between can read them.
+              If that check fails, nothing is sent.
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+              <input type="checkbox" id="nexus-tee-enabled" style="width:auto;">
+              Use the verified TEE Gateway
+            </label>
+            <div id="nexus-tee-panel" style="display:none;margin-top:10px;">
+              <button class="probe-btn" id="nexus-probe-btn" onclick="probeNexus()">
+                <span id="nexus-probe-icon">&#128269;</span> Check the local proxy
+              </button>
+              <div id="nexus-probe-result"></div>
+            </div>
+          </div>
+          <div class="field">
             <label>Model</label>
             <div class="hint">Browse the available models at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a> and paste the full <code>provider/model</code> ID below.</div>
-            <input type="text" id="nexus-model-input" placeholder="e.g. minimax/minimax-m2.7">
+            <div id="nexus-model-container"></div>
           </div>
         `;
+        document.getElementById("nexus-model-container")
+          .appendChild(createModelInput("nexus-model", [], "e.g. minimax/minimax-m2.7"));
+        const teeToggle = document.getElementById("nexus-tee-enabled");
+        teeToggle.checked = nexusTeeEnabled;
+        teeToggle.addEventListener("change", (e) => {
+          nexusTeeEnabled = e.target.checked;
+          document.getElementById("nexus-tee-panel").style.display = e.target.checked ? "block" : "none";
+          if (e.target.checked) probeNexus();
+        });
+        document.getElementById("nexus-tee-panel").style.display = nexusTeeEnabled ? "block" : "none";
+        if (nexusTeeEnabled) probeNexus();
         return;
       }
 
@@ -695,6 +726,46 @@
       }
     }
 
+    // Whether prompts go through the local verifying proxy. Restored from the
+    // saved base URL so reopening the wizard does not silently turn it off.
+    let nexusTeeEnabled = false;
+    const NEXUS_TEE_BASE_URL = "http://nexus-local-proxy.dappnode.private:3301/v1";
+    const NEXUS_STANDARD_BASE_URL = "https://nexus-api.dappnode.com/v1";
+
+    function nexusBaseUrl() {
+      return nexusTeeEnabled ? NEXUS_TEE_BASE_URL : NEXUS_STANDARD_BASE_URL;
+    }
+
+    async function probeNexus() {
+      const btn = document.getElementById("nexus-probe-btn");
+      const icon = document.getElementById("nexus-probe-icon");
+      const resultEl = document.getElementById("nexus-probe-result");
+      if (!btn || !resultEl) return;
+      btn.disabled = true; icon.textContent = "\u23F3"; resultEl.innerHTML = "";
+      try {
+        const resp = await fetch("/api/nexus/probe");
+        const data = await resp.json();
+        if (data.reachable && data.verified) {
+          const rev = data.sourceRevision ? data.sourceRevision.slice(0, 12) : "unknown";
+          resultEl.innerHTML = `<div class="probe-result ok"><strong>Gateway verified.</strong> The local proxy checked ${data.checks || 0} things and confirmed the Gateway is running DAppNode release <code>${rev}</code> inside sealed hardware.<br>Your prompts will be encrypted to that enclave.</div>`;
+          if (data.models && data.models.length) {
+            const mc = document.getElementById("nexus-model-container");
+            const previous = (document.getElementById("nexus-model-input") || {}).value || "";
+            mc.innerHTML = "";
+            mc.appendChild(createModelInput("nexus-model", data.models, "Select or type a model..."));
+            document.getElementById("nexus-model-input").value = previous || data.models[0];
+          }
+        } else if (data.reachable) {
+          resultEl.innerHTML = `<div class="probe-result fail"><strong>Proxy running, but not verified.</strong> ${data.reason || "Status: " + (data.status || "unknown")}.<br>It will not carry prompts until it can verify the Gateway. Leave TEE mode off until this reads verified.</div>`;
+        } else {
+          resultEl.innerHTML = `<div class="probe-result fail"><strong>Nexus Local Proxy not found.</strong> Install the <strong>Nexus Local Proxy</strong> package on this DAppNode, then check again. Without it, TEE mode cannot be used.</div>`;
+        }
+      } catch {
+        resultEl.innerHTML = `<div class="probe-result fail">Could not check the local proxy.</div>`;
+      }
+      btn.disabled = false; icon.textContent = "\uD83D\uDD0D";
+    }
+
     async function probeOllama() {
       const btn = document.getElementById("probe-btn");
       const icon = document.getElementById("probe-icon");
@@ -738,7 +809,7 @@
       if (p.id === "nexus") {
         const apiKey = (document.getElementById("api-key").value || "").trim();
         if (apiKey) env.NEXUS_API_KEY = apiKey;
-        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
+        env.OPENAI_BASE_URL = nexusBaseUrl();
         env.OPENAI_API_KEY = apiKey;
         env.LLM_MODEL = getModelValue() || "minimax/minimax-m2.7";
       } else if (p.id === "ollama") {
@@ -789,7 +860,7 @@
       if (p.id === "nexus") {
         lines.push(`  default: "${getModelValue() || "minimax/minimax-m2.7"}"`);
         lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+        lines.push(`  base_url: "${nexusBaseUrl()}"`);
       } else if (p.id === "ollama") {
         const url = (document.getElementById("ollama-url").value || "").trim() || "http://ollama.dappnode:11434";
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
