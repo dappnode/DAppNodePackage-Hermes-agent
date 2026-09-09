@@ -27,51 +27,41 @@ Nexus runs as a service within the Dappnode ecosystem. Users access it via:
 - **Web UI**: https://nexus.dappnode.com/
 - **API endpoint**: `https://nexus-api.dappnode.com/v1`
 
-There are two ways to reach the API, chosen by the **Nexus privacy mode** switch
-on the setup wizard's Dashboard tab. It can be flipped at any time, not only
-during setup:
+**Nexus privacy mode** is a switch on the setup wizard's Dashboard tab. It can
+be flipped at any time, not only during setup.
 
-| Route | `model.base_url` | Who can read the prompt in transit |
-|---|---|---|
-| Direct | `https://nexus-api.dappnode.com/v1` | TLS terminates at Cloudflare, so prompts are visible there |
-| Private mode | `http://nexus-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the TEE |
+Turned on, prompts go through the **nexus-proxy** package on the same Dappnode,
+which encrypts them so only the TEE (trusted execution environment) running
+Nexus can read them. The proxy verifies that TEE automatically on every
+connection; the user can check the proof at
+`http://nexus-proxy.dappnode.private:3301/verification`.
 
-Private mode routes through the **nexus-proxy** package on the same
-Dappnode. That proxy verifies that the Nexus Gateway is running in a TEE
-(trusted execution environment) and encrypts request and response bodies, so
-nobody in between — including whoever terminates TLS — can read them. The
-verification happens automatically on every connection; the user does not have
-to do anything, but can check the proof themselves.
+It changes **only** `model.base_url`:
 
-It **fails closed**: if the Gateway cannot be verified the proxy refuses to
-run, and Hermes gets connection errors rather than a silent downgrade to the
-unprotected path. The verification page at
-`http://nexus-proxy.dappnode.private:3301/verification` shows the current
-verdict, the checks performed, and the raw attestation evidence for independent
-re-checking.
+| Mode | `model.base_url` |
+|---|---|
+| Off | `https://nexus-api.dappnode.com/v1` |
+| On | `http://nexus-proxy.dappnode.private:3301/v1` |
 
-Switching modes changes **only** `model.base_url`. The Nexus API key, the
-provider (`custom`) and the selected model are identical on both routes, so
-turning privacy on or off never requires re-entering a key or reconfiguring the
-provider. Hermes reads `config.yaml` at startup, so the package restarts itself
-to apply the change; the switch does that automatically.
+The API key, provider (`custom`) and model are the same either way, so
+switching never needs a key re-entered or the provider reconfigured. Hermes
+reads `config.yaml` at startup, so the switch restarts the package itself.
 
-The switch refuses to turn private mode on while `nexus-proxy` is
-unreachable, because the proxy fails closed and Hermes would simply stop
-working. Install and start that package first.
+The switch will not turn private mode on while `nexus-proxy` is unreachable:
+the proxy fails closed, so Hermes would just stop working. Point the user at
+the Dappstore to install it.
 
 ### What does not work in private mode
 
 Verified against the live TEE Gateway, not assumed:
 
-- **Auto Router (`nexus/auto`) fails.** It returns 500 on the TEE Gateway while
-  working normally on production. Tell the user to pick a specific model.
-- **PII masking does not apply.** The masking service runs outside the TEE and
-  the TEE is only allowed to reach its measured egress routes, which do not
-  include it. A key with masking enabled does not get masking here.
+- **Auto Router (`nexus/auto`)** returns 500 on the TEE Gateway while working
+  on production. Tell the user to pick a specific model.
+- **PII masking** does not apply. The masking service sits outside the TEE and
+  the TEE may only reach its measured egress routes, which exclude it.
 
-Everything else checked out: normal models, the `private/*` models and
-streaming all work, and both endpoints serve the same 15-model catalog.
+Normal models, the `private/*` models and streaming all work, and both
+endpoints serve the same catalog.
 
 ## Key URLs
 

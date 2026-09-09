@@ -923,9 +923,9 @@
           + "Nexus can read them &mdash; not Dappnode, not us, nobody in between. The proxy "
           + "verifies it for you on every connection."
           + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`
-          + '<br><span class="nexus-mode-note">Two things do not work in private mode yet: '
-          + "<strong>Auto Router</strong> (pick a specific model instead) and "
-          + "<strong>PII masking</strong>.</span>";
+          + '<br><span class="nexus-mode-note">'
+          + "<strong>Auto Router</strong> and <strong>PII masking</strong> do not work in "
+          + "private mode. Pick a specific model.</span>";
       } else {
         detail.innerHTML =
           "Turn this on to encrypt your prompts so only the TEE (trusted execution environment) "
@@ -1283,16 +1283,15 @@
             <div id="nexus-attested-notice"
               style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
               Your prompts get encrypted so only the TEE (trusted execution environment) running
-              Nexus can read them. We cannot read them, and neither can anyone in between. The proxy
-              verifies the TEE for you automatically, and you can
+              Nexus can read them &mdash; not us, nobody in between. The proxy verifies it
+              automatically, and you can
               <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">check the proof</a>
-              yourself any time. Same API key, same models, same prices.
+              yourself. Same API key, same models, same prices.
               <br><br>
               Needs the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a>
-              package running here. Two things do not work in private mode yet:
-              <strong>Auto Router</strong> (pick a specific model instead) and
-              <strong>PII masking</strong>. If the TEE cannot be verified, requests stop rather than
-              going out unprotected.
+              package running here. <strong>Auto Router</strong> and <strong>PII masking</strong>
+              do not work in private mode &mdash; pick a specific model. If the TEE cannot be
+              verified, requests stop.
             </div>
           </div>
         `;
