@@ -28,18 +28,15 @@ import json
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import yaml
 
-NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1"
+NEXUS_DIRECT_HOST = "nexus-api.dappnode.com"
 NEXUS_PROXY_HOST = "nexus-local-proxy.dappnode.private"
+NEXUS_DIRECT_BASE_URL = f"https://{NEXUS_DIRECT_HOST}/v1"
 NEXUS_PROXY_BASE_URL = f"http://{NEXUS_PROXY_HOST}:3301/v1"
 NEXUS_PROXY_VERIFICATION_URL = f"http://{NEXUS_PROXY_HOST}:3301/verification"
-
-# Any base_url carrying one of these is a Nexus endpoint. Kept as a tuple of
-# substrings rather than exact URLs so a trailing slash or an explicit port
-# does not make an endpoint unrecognisable.
-NEXUS_BASE_URL_MARKERS = ("nexus-api.dappnode.com", NEXUS_PROXY_HOST)
 
 MODE_DIRECT = "direct"
 MODE_PRIVATE = "private"
@@ -57,16 +54,36 @@ def config_path() -> Path:
     return Path(os.environ.get("HERMES_HOME", "/opt/data")) / "config.yaml"
 
 
-def is_nexus_base_url(base_url: str) -> bool:
-    return any(marker in base_url for marker in NEXUS_BASE_URL_MARKERS)
+def endpoint_host(base_url: str) -> str:
+    """Return the lowercased hostname of base_url, or "" if there isn't one.
+
+    Modes are decided on an exact hostname, never on a substring. Substring
+    matching would classify https://nexus-api.dappnode.com.example.net/v1 as
+    Nexus, and worse, would let a host merely *containing* the proxy name be
+    reported as private mode -- so the dashboard would promise the prompt was
+    encrypted to an attested enclave while it went somewhere else entirely.
+    """
+    try:
+        # A base_url written without a scheme still has a host worth reading;
+        # the "//" prefix makes urlsplit treat it as an authority rather than
+        # a path. The comparison below stays exact either way.
+        candidate = base_url if "//" in base_url else "//" + base_url.lstrip("/")
+        return (urlsplit(candidate).hostname or "").lower()
+    except ValueError:
+        return ""
 
 
 def detect_mode(base_url: str) -> str:
-    if NEXUS_PROXY_HOST in base_url:
+    host = endpoint_host(base_url)
+    if host == NEXUS_PROXY_HOST:
         return MODE_PRIVATE
-    if "nexus-api.dappnode.com" in base_url:
+    if host == NEXUS_DIRECT_HOST:
         return MODE_DIRECT
     return MODE_NOT_NEXUS
+
+
+def is_nexus_base_url(base_url: str) -> bool:
+    return detect_mode(base_url) != MODE_NOT_NEXUS
 
 
 def load_config(path: Path) -> dict:
