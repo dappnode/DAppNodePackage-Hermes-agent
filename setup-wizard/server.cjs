@@ -387,6 +387,10 @@ async function fetchNexusModels() {
         id: m.id,
         name: m.display_name || m.id,
         context_length: m.context_size || 0,
+        // Whether the Gateway reaches this model over an attested, encrypted
+        // transport. This is the actual property behind the "private" badge;
+        // the private/ prefix is only a naming convention and could drift.
+        attested: Boolean(m.proof_mode) && m.proof_mode !== "none",
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
     nexusCache = { models, ts: now };

@@ -51,6 +51,16 @@ The switch will not turn private mode on while `nexus-proxy` is unreachable:
 the proxy fails closed, so Hermes would just stop working. Point the user at
 the Dappstore to install it.
 
+### Recommend a `private/` model
+
+Private mode protects the prompt from the proxy to the Nexus Gateway. A model
+whose id starts with `private/` extends that the rest of the way: the Gateway
+reaches those over an attested, encrypted transport that fails closed, so the
+prompt is protected end to end.
+
+If the user turns private mode on while using another model, suggest switching
+to a `private/` one. `GET /v1/models` marks them.
+
 ### What does not work in private mode
 
 Verified against the live TEE Gateway, not assumed:

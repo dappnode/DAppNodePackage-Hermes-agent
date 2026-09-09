@@ -423,6 +423,11 @@
       color: var(--text);
     }
 
+    .model-suggestions .sg-item .sg-private {
+      margin-left: 8px; padding: 1px 6px; border-radius: 4px;
+      font-size: 0.7rem; letter-spacing: 0.02em;
+      background: rgba(255, 215, 0, 0.18); color: var(--primary, #FFD700);
+    }
     .model-suggestions .sg-item .sg-ctx {
       color: var(--text-muted);
       font-size: 0.75rem;
@@ -924,8 +929,10 @@
           + "verifies it for you on every connection."
           + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`
           + '<br><span class="nexus-mode-note">'
+          + "Pick a model whose id starts with <strong>private/</strong> to keep it encrypted "
+          + "the whole way, to Nexus and on to the model. "
           + "<strong>Auto Router</strong> and <strong>PII masking</strong> do not work in "
-          + "private mode. Pick a specific model.</span>";
+          + "private mode.</span>";
       } else {
         detail.innerHTML =
           "Turn this on to encrypt your prompts so only the TEE (trusted execution environment) "
@@ -1228,7 +1235,15 @@
           const ctx = (typeof m === "object" && m.context_length) ? (Math.round(m.context_length / 1000) + "k ctx") : "";
           const div = document.createElement("div");
           div.className = "sg-item";
-          div.innerHTML = `<span class="sg-id">${id}</span>${ctx ? `<span class="sg-ctx">${ctx}</span>` : ""}`;
+          // Badge on the attested-transport property the catalog reports, not on
+          // the id: the private/ prefix is a naming convention, and labelling a
+          // model "private" because of its name would be a claim we cannot back.
+          // Fall back to the prefix only for the static offline suggestion list.
+          const attested = (typeof m === "object" && "attested" in m)
+            ? m.attested
+            : String(id).startsWith("private/");
+          const priv = attested ? `<span class="sg-private">private</span>` : "";
+          div.innerHTML = `<span class="sg-id">${id}</span>${priv}${ctx ? `<span class="sg-ctx">${ctx}</span>` : ""}`;
           div.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = id; dropdown.classList.remove("open"); });
           dropdown.appendChild(div);
         });
@@ -1270,7 +1285,7 @@
           </div>
           <div class="field">
             <label>Model</label>
-            <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
+            <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>. Models marked <strong>private</strong> run inside a TEE, so with private mode on your prompt stays encrypted the whole way.</div>
             <div id="nexus-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from Nexus...</div></div>
           </div>
           <div class="field">
@@ -1289,9 +1304,10 @@
               yourself. Same API key, same models, same prices.
               <br><br>
               Needs the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a>
-              package running here. <strong>Auto Router</strong> and <strong>PII masking</strong>
-              do not work in private mode &mdash; pick a specific model. If the TEE cannot be
-              verified, requests stop.
+              package running here. For the whole path, pick a model whose id starts with
+              <strong>private/</strong> &mdash; those run inside a TEE too.
+              <strong>Auto Router</strong> and <strong>PII masking</strong> do not work in
+              private mode. If the TEE cannot be verified, requests stop.
             </div>
           </div>
         `;
