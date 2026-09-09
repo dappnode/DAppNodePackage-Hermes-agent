@@ -7,8 +7,8 @@ Nexus is reachable two ways, and the only difference between them is
   direct   https://nexus-api.dappnode.com/v1
            TLS terminates at Cloudflare, so prompts are readable there.
 
-  private  http://nexus-local-proxy.dappnode.private:3301/v1
-           The nexus-local-proxy package on this DAppNode verifies the
+  private  http://nexus-proxy.dappnode.private:3301/v1
+           The nexus-proxy package on this DAppNode verifies the
            Gateway's AWS Nitro attestation and encrypts request and response
            bodies with EHBP, so the TLS terminator cannot read them.
 
@@ -33,7 +33,13 @@ from urllib.parse import urlsplit
 import yaml
 
 NEXUS_DIRECT_HOST = "nexus-api.dappnode.com"
-NEXUS_PROXY_HOST = "nexus-local-proxy.dappnode.private"
+NEXUS_PROXY_HOST = "nexus-proxy.dappnode.private"
+
+# The proxy package was called nexus-local-proxy before it took the core
+# DNP_NEXUS_PROXY naming. A config written back then still names the old host,
+# which no longer resolves. Recognising it keeps the reported mode honest --
+# the user did choose private -- and boot-time migration repoints it.
+LEGACY_PROXY_HOSTS = ("nexus-local-proxy.dappnode.private",)
 NEXUS_DIRECT_BASE_URL = f"https://{NEXUS_DIRECT_HOST}/v1"
 NEXUS_PROXY_BASE_URL = f"http://{NEXUS_PROXY_HOST}:3301/v1"
 NEXUS_PROXY_VERIFICATION_URL = f"http://{NEXUS_PROXY_HOST}:3301/verification"
@@ -75,11 +81,33 @@ def endpoint_host(base_url: str) -> str:
 
 def detect_mode(base_url: str) -> str:
     host = endpoint_host(base_url)
-    if host == NEXUS_PROXY_HOST:
+    if host == NEXUS_PROXY_HOST or host in LEGACY_PROXY_HOSTS:
         return MODE_PRIVATE
     if host == NEXUS_DIRECT_HOST:
         return MODE_DIRECT
     return MODE_NOT_NEXUS
+
+
+def migrate_legacy_host(path: Path | None = None) -> bool:
+    """Repoint a config still naming the pre-rename proxy host.
+
+    Returns True when it rewrote something. Safe to run on every boot: it only
+    touches a base_url whose host is a known legacy name.
+    """
+    path = path or config_path()
+    config = load_config(path)
+    model = config.get("model")
+    if not isinstance(model, dict):
+        return False
+    if endpoint_host(str(model.get("base_url") or "")) not in LEGACY_PROXY_HOSTS:
+        return False
+    model["base_url"] = NEXUS_PROXY_BASE_URL
+    config["model"] = model
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with open(temporary, "w") as handle:
+        yaml.dump(config, handle, default_flow_style=False, sort_keys=False)
+    os.replace(temporary, path)
+    return True
 
 
 def is_nexus_base_url(base_url: str) -> bool:

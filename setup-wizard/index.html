@@ -925,7 +925,7 @@
           }
         }
         detail.innerHTML =
-          "Prompts and completions go through <strong>nexus-local-proxy</strong> on this DAppNode, "
+          "Prompts and completions go through <strong>nexus-proxy</strong> on this DAppNode, "
           + "which checks the Gateway is the expected code running inside an AWS Nitro Enclave and "
           + "encrypts bodies so the TLS terminator in front of Nexus cannot read them."
           + evidence
@@ -940,8 +940,8 @@
       if (!proxy.reachable) {
         toggle.disabled = true;
         nexusModeMessage(
-          "<strong>nexus-local-proxy is not reachable.</strong> Install and start the "
-          + "<strong>nexus-local-proxy</strong> package on this DAppNode to use private mode."
+          "<strong>nexus-proxy is not reachable.</strong> Install and start the "
+          + "<strong>nexus-proxy</strong> package on this DAppNode to use private mode."
           + (isPrivate
             ? " Private mode is currently selected, so Hermes will report connection errors until "
               + "the proxy is running — the proxy fails closed and never falls back to the "
@@ -1089,10 +1089,10 @@
     // Nexus can be reached two ways. The direct endpoint terminates TLS at
     // Cloudflare, so prompts are readable there. The local proxy verifies the
     // Gateway's AWS Nitro attestation and encrypts bodies end-to-end past that
-    // point, at the cost of a hard dependency on nexus-local-proxy running.
+    // point, at the cost of a hard dependency on nexus-proxy running.
     const NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1";
-    const NEXUS_PROXY_BASE_URL = "http://nexus-local-proxy.dappnode.private:3301/v1";
-    const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-local-proxy.dappnode.private:3301/verification";
+    const NEXUS_PROXY_BASE_URL = "http://nexus-proxy.dappnode.private:3301/v1";
+    const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-proxy.dappnode.private:3301/verification";
 
     // Whether the private-proxy toggle is on. Read through a helper so a
     // screen that has not rendered the checkbox yet still gets the default.
@@ -1280,7 +1280,7 @@
           </div>
           <div class="field">
             <label>Private mode</label>
-            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus. Requires the <strong>nexus-local-proxy</strong> package installed and running on this DAppNode.</div>
+            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus. Requires the <strong>nexus-proxy</strong> package installed and running on this DAppNode.</div>
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
               <input type="checkbox" id="nexus-attested" style="width:auto;">
               Route through the attested Nexus proxy on this DAppNode
@@ -1289,13 +1289,13 @@
               style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
               <strong style="color:var(--primary);">&rarr; What this changes</strong><br>
               Without it, your prompts travel to Nexus over ordinary HTTPS, which is decrypted at
-              Cloudflare before it reaches the Gateway. With it, the <strong>nexus-local-proxy</strong>
+              Cloudflare before it reaches the Gateway. With it, the <strong>nexus-proxy</strong>
               package on this DAppNode verifies that the Gateway is the expected code running inside an
               AWS Nitro Enclave, and encrypts prompts and completions so Cloudflare cannot read them.
               <br><br>
               <strong style="color:var(--primary);">&rarr; The trade-off</strong><br>
               This package does not install the proxy for you &mdash; install
-              <strong>nexus-local-proxy</strong> first, or leave this off. The proxy also
+              <strong>nexus-proxy</strong> first, or leave this off. The proxy also
               <strong>fails closed</strong>: if it cannot verify the Gateway it refuses to run,
               and Hermes will report connection errors until it recovers &mdash; there is no silent
               fallback to the unprotected path. Check

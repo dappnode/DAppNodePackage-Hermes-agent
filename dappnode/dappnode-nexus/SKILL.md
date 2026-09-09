@@ -34,9 +34,9 @@ during setup:
 | Route | `model.base_url` | Who can read the prompt in transit |
 |---|---|---|
 | Direct | `https://nexus-api.dappnode.com/v1` | TLS terminates at Cloudflare, so prompts are visible there |
-| Private mode | `http://nexus-local-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the enclave |
+| Private mode | `http://nexus-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the enclave |
 
-Private mode routes through the **nexus-local-proxy** package on the same
+Private mode routes through the **nexus-proxy** package on the same
 DAppNode. That proxy verifies the Nexus Gateway's AWS Nitro Enclave attestation
 against a pinned trust policy and encrypts request and response bodies with
 EHBP, so an intermediary that terminates TLS cannot read them.
@@ -44,7 +44,7 @@ EHBP, so an intermediary that terminates TLS cannot read them.
 It **fails closed**: if the Gateway cannot be verified the proxy refuses to
 run, and Hermes gets connection errors rather than a silent downgrade to the
 unprotected path. The verification page at
-`http://nexus-local-proxy.dappnode.private:3301/verification` shows the current
+`http://nexus-proxy.dappnode.private:3301/verification` shows the current
 verdict, the checks performed, and the raw attestation evidence for independent
 re-checking.
 
@@ -54,7 +54,7 @@ turning privacy on or off never requires re-entering a key or reconfiguring the
 provider. Hermes reads `config.yaml` at startup, so the package restarts itself
 to apply the change; the switch does that automatically.
 
-The switch refuses to turn private mode on while `nexus-local-proxy` is
+The switch refuses to turn private mode on while `nexus-proxy` is
 unreachable, because the proxy fails closed and Hermes would simply stop
 working. Install and start that package first.
 
@@ -64,8 +64,8 @@ working. Install and start that package first.
 |----------|-----|
 | Nexus Web App | https://nexus.dappnode.com/ |
 | Nexus API | https://nexus-api.dappnode.com/v1 |
-| Attested local proxy | http://nexus-local-proxy.dappnode.private:3301/v1 |
-| Proxy verification page | http://nexus-local-proxy.dappnode.private:3301/verification |
+| Attested local proxy | http://nexus-proxy.dappnode.private:3301/v1 |
+| Proxy verification page | http://nexus-proxy.dappnode.private:3301/verification |
 | DAppNode Main Site | https://dappnode.com/ |
 
 ## Privacy Guarantees

@@ -26,6 +26,7 @@ skip_dashboard_auth = os.environ.get("DAPPNODE_SKIP_DASHBOARD_AUTH") == "1"
 from nexus_mode import (  # noqa: E402
     NEXUS_DIRECT_BASE_URL,
     is_nexus_base_url,
+    migrate_legacy_host,
 )
 
 
@@ -190,6 +191,14 @@ msg = f"Patched config.yaml for DAppNode (api_port=3000, dashboard_auth={dashboa
 if generated_dashboard_auth:
     msg += "; dashboard credentials saved to /opt/data/dashboard-login.txt"
 print(msg)
+
+# --- Nexus proxy rename: repoint configs written before DNP_NEXUS_PROXY ---
+# The old nexus-local-proxy.dappnode.private host no longer resolves, so a
+# config still naming it would leave private mode permanently failing. Rewrite
+# it before the context-length lookup below reads base_url.
+if migrate_legacy_host(config_path):
+    config = yaml.safe_load(open(config_path)) or {}
+    print("Nexus: repointed the proxy host to nexus-proxy.dappnode.private")
 
 # --- Nexus context length: source the real value from /v1/models ---
 # Neither Nexus endpoint is in Hermes' URL-to-provider map, so the agent cannot

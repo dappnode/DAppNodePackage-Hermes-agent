@@ -405,8 +405,8 @@ async function fetchNexusModels() {
 // neither the venv nor /opt/dappnode exists.
 const NEXUS_MODE_SCRIPT = process.env.NEXUS_MODE_SCRIPT || "/opt/dappnode/nexus_mode.py";
 const NEXUS_MODE_PYTHON = process.env.NEXUS_MODE_PYTHON || "/opt/hermes/.venv/bin/python3";
-const NEXUS_PROXY_HEALTH_URL = "http://nexus-local-proxy.dappnode.private:3301/healthz";
-const NEXUS_PROXY_VERIFICATION_API = "http://nexus-local-proxy.dappnode.private:3301/v1/verification";
+const NEXUS_PROXY_HEALTH_URL = "http://nexus-proxy.dappnode.private:3301/healthz";
+const NEXUS_PROXY_VERIFICATION_API = "http://nexus-proxy.dappnode.private:3301/v1/verification";
 
 /**
  * Run nexus_mode.py and parse its JSON. Runs as the hermes user for the same
@@ -442,7 +442,7 @@ async function probeNexusProxy() {
     const resp = await fetch(NEXUS_PROXY_HEALTH_URL, { signal: AbortSignal.timeout(4000) });
     if (!resp.ok) return { reachable: false, reason: `proxy returned HTTP ${resp.status}` };
   } catch {
-    return { reachable: false, reason: "nexus-local-proxy is not reachable on this DAppNode" };
+    return { reachable: false, reason: "nexus-proxy is not reachable on this DAppNode" };
   }
   // Reachable. Fold in the verification verdict when the proxy offers one, so
   // the switch can show what is actually being attested rather than just that

@@ -63,7 +63,7 @@
     "setup": "http://hermes-agent.dappnode:8080",
     "terminal": "http://hermes-agent.dappnode:7681",
     "ui": "http://hermes-agent.dappnode:8080/dashboard",
-    "verification": "http://nexus-local-proxy.dappnode.private:3301/verification"
+    "verification": "http://nexus-proxy.dappnode.private:3301/verification"
   },
   "name": "hermes-agent.dnp.dappnode.eth",
   "repository": {
