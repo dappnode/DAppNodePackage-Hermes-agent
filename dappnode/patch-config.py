@@ -21,12 +21,12 @@ skip_dashboard_auth = os.environ.get("DAPPNODE_SKIP_DASHBOARD_AUTH") == "1"
 
 # Nexus is reachable either directly or through the attested local proxy. Both
 # expose the same OpenAI-compatible catalog, and the model ids are identical.
-NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1"
-NEXUS_BASE_URL_MARKERS = ("nexus-api.dappnode.com", "nexus-local-proxy.dappnode.private")
-
-
-def is_nexus_base_url(base_url):
-    return any(marker in base_url for marker in NEXUS_BASE_URL_MARKERS)
+# The endpoints and the direct/private distinction live in nexus_mode so the
+# boot-time patch and the runtime switch cannot drift apart.
+from nexus_mode import (  # noqa: E402
+    NEXUS_DIRECT_BASE_URL,
+    is_nexus_base_url,
+)
 
 
 # Cloudflare fronts nexus-api.dappnode.com and 403s the default

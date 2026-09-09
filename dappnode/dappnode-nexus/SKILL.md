@@ -27,8 +27,9 @@ Nexus runs as a service within the DAppNode ecosystem. Users access it via:
 - **Web UI**: https://nexus.dappnode.com/
 - **API endpoint**: `https://nexus-api.dappnode.com/v1`
 
-There are two ways to reach the API, chosen by the "Private mode" toggle in the
-setup wizard:
+There are two ways to reach the API, chosen by the **Nexus privacy mode** switch
+on the setup wizard's Dashboard tab. It can be flipped at any time, not only
+during setup:
 
 | Route | `model.base_url` | Who can read the prompt in transit |
 |---|---|---|
@@ -46,6 +47,16 @@ unprotected path. The verification page at
 `http://nexus-local-proxy.dappnode.private:3301/verification` shows the current
 verdict, the checks performed, and the raw attestation evidence for independent
 re-checking.
+
+Switching modes changes **only** `model.base_url`. The Nexus API key, the
+provider (`custom`) and the selected model are identical on both routes, so
+turning privacy on or off never requires re-entering a key or reconfiguring the
+provider. Hermes reads `config.yaml` at startup, so the package restarts itself
+to apply the change; the switch does that automatically.
+
+The switch refuses to turn private mode on while `nexus-local-proxy` is
+unreachable, because the proxy fails closed and Hermes would simply stop
+working. Install and start that package first.
 
 ## Key URLs
 

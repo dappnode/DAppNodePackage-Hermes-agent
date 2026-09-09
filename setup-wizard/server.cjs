@@ -396,6 +396,72 @@ async function fetchNexusModels() {
   }
 }
 
+// --- Nexus endpoint mode -----------------------------------------------
+// Direct vs private (attested local proxy) is only a model.base_url value in
+// config.yaml. nexus_mode.py owns that knowledge and edits the file with a
+// real YAML parser, so the wizard never has to pattern-match config text.
+
+// Overridable so the wizard can be exercised outside the image, where
+// neither the venv nor /opt/dappnode exists.
+const NEXUS_MODE_SCRIPT = process.env.NEXUS_MODE_SCRIPT || "/opt/dappnode/nexus_mode.py";
+const NEXUS_MODE_PYTHON = process.env.NEXUS_MODE_PYTHON || "/opt/hermes/.venv/bin/python3";
+const NEXUS_PROXY_HEALTH_URL = "http://nexus-local-proxy.dappnode.private:3301/healthz";
+const NEXUS_PROXY_VERIFICATION_API = "http://nexus-local-proxy.dappnode.private:3301/v1/verification";
+
+/**
+ * Run nexus_mode.py and parse its JSON. Runs as the hermes user for the same
+ * reason getHermesStatus does: a root-owned config.yaml would leave the
+ * gateway unable to write it.
+ */
+function runNexusMode(args) {
+  return new Promise((resolve) => {
+    const python = NEXUS_MODE_PYTHON;
+    const [cmd, argv] =
+      process.getuid && process.getuid() === 0
+        ? ["s6-setuidgid", ["hermes", python, NEXUS_MODE_SCRIPT, ...args]]
+        : [python, [NEXUS_MODE_SCRIPT, ...args]];
+    execFile(cmd, argv, { timeout: 15000, env: { ...process.env, HERMES_HOME } }, (err, stdout) => {
+      let parsed = null;
+      try { parsed = JSON.parse(String(stdout || "").trim()); } catch { parsed = null; }
+      if (!parsed) {
+        resolve({ error: "could not read the Nexus endpoint from config.yaml" });
+        return;
+      }
+      resolve(parsed);
+    });
+  });
+}
+
+/**
+ * Is the attested proxy actually up? Private mode fails closed, so the UI
+ * must be able to say "this will break Hermes" before the user flips it
+ * rather than after.
+ */
+async function probeNexusProxy() {
+  try {
+    const resp = await fetch(NEXUS_PROXY_HEALTH_URL, { signal: AbortSignal.timeout(4000) });
+    if (!resp.ok) return { reachable: false, reason: `proxy returned HTTP ${resp.status}` };
+  } catch {
+    return { reachable: false, reason: "nexus-local-proxy is not reachable on this DAppNode" };
+  }
+  // Reachable. Fold in the verification verdict when the proxy offers one, so
+  // the switch can show what is actually being attested rather than just that
+  // a port is open.
+  try {
+    const resp = await fetch(NEXUS_PROXY_VERIFICATION_API, { signal: AbortSignal.timeout(4000) });
+    if (resp.ok) {
+      const snapshot = await resp.json();
+      return {
+        reachable: true,
+        status: snapshot.status || null,
+        sourceRevision: (snapshot.current && snapshot.current.source_revision) || null,
+        verifiedTotal: snapshot.verified_total ?? null,
+      };
+    }
+  } catch { /* verification detail is a bonus, not a requirement */ }
+  return { reachable: true };
+}
+
 /**
  * Run `hermes status` and return the output.
  */
@@ -608,6 +674,51 @@ const server = http.createServer(async (req, res) => {
         fs.writeFileSync(CONFIG_FILE, incoming.configYaml, "utf-8");
       }
       json(res, 200, { ok: true });
+    } catch (err) {
+      json(res, 400, { error: err.message });
+    }
+    return;
+  }
+
+  // Current Nexus endpoint mode + whether the attested proxy is usable
+  if (req.method === "GET" && url.pathname === "/api/nexus/mode") {
+    const state = await runNexusMode(["get"]);
+    const proxy = await probeNexusProxy();
+    json(res, 200, { ...state, proxy });
+    return;
+  }
+
+  // Flip between direct Nexus and the attested local proxy.
+  //
+  // This only rewrites model.base_url. The API key, provider and model are
+  // untouched, so switching never asks the user to re-enter anything. Hermes
+  // reads config.yaml at startup, so the caller restarts to apply it.
+  if (req.method === "POST" && url.pathname === "/api/nexus/mode") {
+    try {
+      const body = await readBody(req);
+      const incoming = JSON.parse(body || "{}");
+      const mode = incoming.mode === "private" ? "private" : incoming.mode === "direct" ? "direct" : null;
+      if (!mode) {
+        json(res, 400, { error: "mode must be 'direct' or 'private'" });
+        return;
+      }
+      // Refuse to switch into a mode that cannot work. The proxy fails closed,
+      // so enabling private mode while it is down would take Hermes offline
+      // with a connection error rather than a useful message. `force` exists
+      // for the case where the user is knowingly setting it up ahead of time.
+      if (mode === "private" && !incoming.force) {
+        const proxy = await probeNexusProxy();
+        if (!proxy.reachable) {
+          json(res, 409, { error: proxy.reason, proxy });
+          return;
+        }
+      }
+      const state = await runNexusMode(["set", mode]);
+      if (state.error) {
+        json(res, 400, state);
+        return;
+      }
+      json(res, 200, { ...state, restartRequired: true });
     } catch (err) {
       json(res, 400, { error: err.message });
     }

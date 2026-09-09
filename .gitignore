@@ -12,6 +12,10 @@ build_*/
 # Node
 node_modules/
 
+# Python (dappnode/ is now an importable module)
+__pycache__/
+*.pyc
+
 # OS files
 .DS_Store
 Thumbs.db

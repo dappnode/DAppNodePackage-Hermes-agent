@@ -605,6 +605,42 @@
       border-radius: 4px;
       font-size: 0.8rem;
     }
+
+    /* ---- Nexus privacy mode switch ---- */
+    .nexus-mode-card {
+      border: 1px solid var(--border, #2a2a2a);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      margin-bottom: 1.5rem;
+      background: var(--card, rgba(255,255,255,0.03));
+    }
+    .nexus-mode-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .nexus-mode-title { font-weight: 600; margin-bottom: 2px; }
+    .nexus-mode-sub { font-size: 0.85rem; opacity: 0.75; }
+    .nexus-mode-detail { font-size: 0.85rem; line-height: 1.5; margin-top: 0.7rem; opacity: 0.9; }
+    .nexus-mode-msg {
+      margin-top: 0.7rem; padding: 0.6rem 0.75rem; border-radius: 8px;
+      font-size: 0.85rem; line-height: 1.45;
+      border: 1px solid var(--primary, #FFD700);
+      background: rgba(255, 215, 0, 0.12);
+    }
+    .nexus-mode-msg.err { border-color: #e05252; background: rgba(224, 82, 82, 0.12); }
+    .nexus-mode-msg.ok  { border-color: #3fb950; background: rgba(63, 185, 80, 0.12); }
+    .nexus-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: none; }
+    .nexus-switch input { opacity: 0; width: 0; height: 0; }
+    .nexus-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #555; transition: 0.2s; border-radius: 26px;
+    }
+    .nexus-slider:before {
+      position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px;
+      background: #fff; transition: 0.2s; border-radius: 50%;
+    }
+    .nexus-switch input:checked + .nexus-slider { background: var(--primary, #FFD700); }
+    .nexus-switch input:checked + .nexus-slider:before { transform: translateX(20px); }
+    .nexus-switch input:disabled + .nexus-slider { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 
@@ -641,6 +677,23 @@
           <div class="value" id="st-model">—</div>
         </div>
       </div>
+      <!-- Nexus privacy mode: a runtime switch, not a setup-time choice.
+           Only base_url changes, so the key, provider and model stay put. -->
+      <div class="nexus-mode-card" id="nexus-mode-card" hidden>
+        <div class="nexus-mode-head">
+          <div>
+            <div class="nexus-mode-title">Nexus privacy mode</div>
+            <div class="nexus-mode-sub" id="nexus-mode-sub">Checking…</div>
+          </div>
+          <label class="nexus-switch" title="Route Nexus through the attested local proxy">
+            <input type="checkbox" id="nexus-mode-toggle" disabled>
+            <span class="nexus-slider"></span>
+          </label>
+        </div>
+        <div class="nexus-mode-detail" id="nexus-mode-detail"></div>
+        <div class="nexus-mode-msg" id="nexus-mode-msg" hidden></div>
+      </div>
+
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
         <a href="#" onclick="event.preventDefault(); switchTab('setup')">
@@ -824,6 +877,144 @@
       }
       if (name === "dashboard") {
         refreshDashboard();
+
+    // =========================================================================
+    // Nexus privacy mode (runtime switch)
+    // =========================================================================
+    // Direct and private are the same account, the same key and the same model
+    // ids -- only model.base_url differs. So this is a switch, not a
+    // reconfiguration: nothing is re-entered and the provider never changes.
+
+    let _nexusModeBusy = false;
+
+    function nexusModeMessage(text, kind) {
+      const el = document.getElementById("nexus-mode-msg");
+      if (!el) return;
+      if (!text) { el.hidden = true; el.textContent = ""; return; }
+      el.hidden = false;
+      el.className = "nexus-mode-msg" + (kind ? " " + kind : "");
+      el.innerHTML = text;
+    }
+
+    function renderNexusMode(state) {
+      const card = document.getElementById("nexus-mode-card");
+      const toggle = document.getElementById("nexus-mode-toggle");
+      const sub = document.getElementById("nexus-mode-sub");
+      const detail = document.getElementById("nexus-mode-detail");
+      if (!card || !toggle) return;
+
+      // Not pointed at Nexus at all -- the switch would be meaningless.
+      if (!state || !state.is_nexus) { card.hidden = true; return; }
+      card.hidden = false;
+
+      const isPrivate = state.mode === "private";
+      toggle.checked = isPrivate;
+      toggle.disabled = _nexusModeBusy;
+
+      const proxy = state.proxy || {};
+      sub.textContent = isPrivate
+        ? "On — prompts are encrypted to the attested enclave"
+        : "Off — prompts are readable where TLS terminates";
+
+      if (isPrivate) {
+        let evidence = "";
+        if (proxy.reachable && proxy.status) {
+          evidence = ` Proxy status: <strong>${escapeHtml(String(proxy.status))}</strong>.`;
+          if (proxy.sourceRevision) {
+            evidence += ` Verified Gateway build <code>${escapeHtml(String(proxy.sourceRevision).slice(0, 12))}</code>.`;
+          }
+        }
+        detail.innerHTML =
+          "Prompts and completions go through <strong>nexus-local-proxy</strong> on this DAppNode, "
+          + "which checks the Gateway is the expected code running inside an AWS Nitro Enclave and "
+          + "encrypts bodies so the TLS terminator in front of Nexus cannot read them."
+          + evidence
+          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the verification evidence</a>.`;
+      } else {
+        detail.innerHTML =
+          "Prompts travel to Nexus over ordinary HTTPS, which is decrypted at Cloudflare before it "
+          + "reaches the Gateway. Turn this on to route them through the attested proxy on this "
+          + "DAppNode instead. Your API key and model do not change.";
+      }
+
+      if (!proxy.reachable) {
+        toggle.disabled = true;
+        nexusModeMessage(
+          "<strong>nexus-local-proxy is not reachable.</strong> Install and start the "
+          + "<strong>nexus-local-proxy</strong> package on this DAppNode to use private mode."
+          + (isPrivate
+            ? " Private mode is currently selected, so Hermes will report connection errors until "
+              + "the proxy is running — the proxy fails closed and never falls back to the "
+              + "unprotected path."
+            : ""),
+          isPrivate ? "err" : null
+        );
+      } else if (!_nexusModeBusy) {
+        nexusModeMessage(null);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+      ));
+    }
+
+    async function refreshNexusMode() {
+      try {
+        const resp = await fetch("/api/nexus/mode");
+        renderNexusMode(await resp.json());
+      } catch {
+        const card = document.getElementById("nexus-mode-card");
+        if (card) card.hidden = true;
+      }
+    }
+
+    async function setNexusMode(enabled) {
+      const toggle = document.getElementById("nexus-mode-toggle");
+      _nexusModeBusy = true;
+      if (toggle) toggle.disabled = true;
+      const target = enabled ? "private" : "direct";
+      nexusModeMessage("Switching to " + (enabled ? "private" : "direct") + " mode…");
+      try {
+        const resp = await fetch("/api/nexus/mode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: target })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          // Put the switch back where it was: the change did not happen.
+          if (toggle) toggle.checked = !enabled;
+          nexusModeMessage(escapeHtml(data.error || "Could not switch mode"), "err");
+          return;
+        }
+        // Hermes reads config.yaml at startup, so the switch only takes effect
+        // after a restart. Do it for the user rather than leaving the agent in
+        // a state that disagrees with what the toggle shows.
+        nexusModeMessage("Saved. Restarting Hermes to apply…", "ok");
+        await fetch("/api/restart", { method: "POST" });
+        nexusModeMessage(
+          "Restarting Hermes — this takes about 5–10 seconds. "
+          + (enabled
+            ? "Prompts will be encrypted to the attested enclave once it is back."
+            : "Prompts will go directly to Nexus once it is back."),
+          "ok"
+        );
+        setTimeout(() => { refreshNexusMode(); refreshDashboard(); }, 12000);
+      } catch (err) {
+        if (toggle) toggle.checked = !enabled;
+        nexusModeMessage(escapeHtml(err.message || "Could not switch mode"), "err");
+      } finally {
+        _nexusModeBusy = false;
+        if (toggle) toggle.disabled = false;
+      }
+    }
+
+    document.getElementById("nexus-mode-toggle")
+      .addEventListener("change", (e) => setNexusMode(e.target.checked));
+
+    refreshNexusMode();
       } else {
         // Stop polling when leaving dashboard
         if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
@@ -1116,6 +1307,16 @@
         document.getElementById("nexus-attested").addEventListener("change", (e) => {
           document.getElementById("nexus-attested-notice").style.display = e.target.checked ? "block" : "none";
         });
+        // Seed the checkbox from the mode actually in force. Without this,
+        // re-running the wizard with private mode on would silently write the
+        // direct endpoint back, downgrading the user without telling them.
+        fetch("/api/nexus/mode").then(r => r.json()).then((state) => {
+          if (!state || state.mode !== "private") return;
+          const box = document.getElementById("nexus-attested");
+          if (!box) return;
+          box.checked = true;
+          document.getElementById("nexus-attested-notice").style.display = "block";
+        }).catch(() => {});
         fetchNexusModels();
         return;
       }
