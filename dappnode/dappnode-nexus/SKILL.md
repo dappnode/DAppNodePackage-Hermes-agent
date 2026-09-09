@@ -60,6 +60,19 @@ The switch refuses to turn private mode on while `nexus-proxy` is
 unreachable, because the proxy fails closed and Hermes would simply stop
 working. Install and start that package first.
 
+### What does not work in private mode
+
+Verified against the live TEE Gateway, not assumed:
+
+- **Auto Router (`nexus/auto`) fails.** It returns 500 on the TEE Gateway while
+  working normally on production. Tell the user to pick a specific model.
+- **PII masking does not apply.** The masking service runs outside the TEE and
+  the TEE is only allowed to reach its measured egress routes, which do not
+  include it. A key with masking enabled does not get masking here.
+
+Everything else checked out: normal models, the `private/*` models and
+streaming all work, and both endpoints serve the same 15-model catalog.
+
 ## Key URLs
 
 | Resource | URL |

@@ -620,6 +620,7 @@
     .nexus-mode-title { font-weight: 600; margin-bottom: 2px; }
     .nexus-mode-sub { font-size: 0.85rem; opacity: 0.75; }
     .nexus-mode-detail { font-size: 0.85rem; line-height: 1.5; margin-top: 0.7rem; opacity: 0.9; }
+    .nexus-mode-note { display: inline-block; margin-top: 0.5rem; opacity: 0.75; }
     .nexus-mode-msg {
       margin-top: 0.7rem; padding: 0.6rem 0.75rem; border-radius: 8px;
       font-size: 0.85rem; line-height: 1.45;
@@ -914,18 +915,22 @@
       const proxy = state.proxy || {};
       sub.textContent = isPrivate
         ? "On — only the TEE can read your prompts"
-        : "Off — your prompts can be read in transit";
+        : "Off — available on this Dappnode";
 
       if (isPrivate) {
         detail.innerHTML =
           "Your prompts are encrypted so only the TEE (trusted execution environment) running "
           + "Nexus can read them &mdash; not Dappnode, not us, nobody in between. The proxy "
           + "verifies it for you on every connection."
-          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`;
+          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`
+          + '<br><span class="nexus-mode-note">Two things do not work in private mode yet: '
+          + "<strong>Auto Router</strong> (pick a specific model instead) and "
+          + "<strong>PII masking</strong>.</span>";
       } else {
         detail.innerHTML =
-          "Your prompts can be read on the way to Nexus. Turn this on to encrypt them so only "
-          + "the TEE can. Same API key, same model.";
+          "Turn this on to encrypt your prompts so only the TEE (trusted execution environment) "
+          + "running Nexus can read them. Same API key, same models, same prices &mdash; the "
+          + "proxy handles the verification for you.";
       }
 
       if (!proxy.reachable) {
@@ -1270,7 +1275,7 @@
           </div>
           <div class="field">
             <label>Private mode</label>
-            <div class="hint">Encrypts your prompts so only the TEE running Nexus can read them. Needs the <strong>Nexus Proxy</strong> package on this Dappnode.</div>
+            <div class="hint">Optional. Encrypts your prompts so only the TEE running Nexus can read them.</div>
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
               <input type="checkbox" id="nexus-attested" style="width:auto;">
               Keep my prompts private
@@ -1281,11 +1286,13 @@
               Nexus can read them. We cannot read them, and neither can anyone in between. The proxy
               verifies the TEE for you automatically, and you can
               <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">check the proof</a>
-              yourself any time.
+              yourself any time. Same API key, same models, same prices.
               <br><br>
               Needs the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a>
-              package running here. If it cannot verify the TEE it stops instead of sending your
-              prompts unprotected.
+              package running here. Two things do not work in private mode yet:
+              <strong>Auto Router</strong> (pick a specific model instead) and
+              <strong>PII masking</strong>. If the TEE cannot be verified, requests stop rather than
+              going out unprotected.
             </div>
           </div>
         `;
