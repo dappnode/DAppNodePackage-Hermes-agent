@@ -13,7 +13,7 @@ RUN cd /opt/hermes/scripts/whatsapp-bridge && npm install --omit=dev --no-audit 
 # Copy setup wizard into the image
 COPY setup-wizard/ /opt/setup-wizard/
 
-# Copy DAppNode context files (seeded into HERMES_HOME on first boot)
+# Copy Dappnode context files (seeded into HERMES_HOME on first boot)
 COPY dappnode/ /opt/dappnode/
 
 # v2026.7.1 auto-starts OAuth when BasicAuthProvider is the only dashboard
@@ -22,7 +22,7 @@ COPY dappnode/ /opt/dappnode/
 # package moves to a release containing it.
 RUN python3 /opt/dappnode/backport-dashboard-auth.py
 
-# DAppNode s6-overlay customizations: a cont-init bootstrap hook plus the
+# Dappnode s6-overlay customizations: a cont-init bootstrap hook plus the
 # setup-wizard and ttyd long-run services. We deliberately do NOT override the
 # image ENTRYPOINT — the upstream image runs s6-overlay's /init (which handles
 # UID remap, chown, config seeding, schema migration, skills sync and drops to
@@ -39,7 +39,7 @@ ENV HERMES_HOME=/opt/data
 # Expose API server, web UI, setup wizard, and web terminal ports
 EXPOSE 3000 8080 8081 7681
 
-# Health check for DAppNode monitoring
+# Health check for Dappnode monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 

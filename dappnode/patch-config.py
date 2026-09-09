@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch a freshly-seeded Hermes config.yaml for the DAppNode environment.
+"""Patch a freshly-seeded Hermes config.yaml for the Dappnode environment.
 
 Run as the `hermes` user from the 10-dappnode-setup cont-init hook, AFTER
 upstream's stage2-hook has seeded config.yaml from cli-config.yaml.example
@@ -128,9 +128,9 @@ def configure_dashboard_auth(config):
     if password and has_config_password:
         return False
 
-    # If Hermes already has only a password hash but DAppNode has no saved
+    # If Hermes already has only a password hash but Dappnode has no saved
     # plaintext credential, the setup wizard cannot perform its auto-login
-    # handoff. Generate a new DAppNode-managed password and keep both files in
+    # handoff. Generate a new Dappnode-managed password and keep both files in
     # sync so users are not stranded at the raw dashboard login screen.
     password = password or secrets.token_urlsafe(24)
 
@@ -158,7 +158,7 @@ except FileNotFoundError:
 except Exception:
     config = {}
 
-# --- Network access: bind the gateway to the LAN on the DAppNode port ---
+# --- Network access: bind the gateway to the LAN on the Dappnode port ---
 gw = config.setdefault("gateway", {})
 gw["port"] = 3000
 gw["bind"] = "lan"
@@ -187,7 +187,7 @@ if isinstance(platforms, dict):
 with open(config_path, "w") as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 dashboard_auth_status = "skipped" if skip_dashboard_auth else "basic"
-msg = f"Patched config.yaml for DAppNode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
+msg = f"Patched config.yaml for Dappnode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
 if generated_dashboard_auth:
     msg += "; dashboard credentials saved to /opt/data/dashboard-login.txt"
 print(msg)

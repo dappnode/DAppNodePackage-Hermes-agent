@@ -1,6 +1,6 @@
 #!/command/with-contenv sh
 # shellcheck shell=sh
-# DAppNode web terminal (ttyd on :7681), running as the hermes user.
+# Dappnode web terminal (ttyd on :7681), running as the hermes user.
 # `bash -l` sources /etc/profile.d/hermes-venv.sh (installed by
 # 10-dappnode-setup), which puts the venv on PATH and cd's to HERMES_HOME.
 export HOME=/opt/data

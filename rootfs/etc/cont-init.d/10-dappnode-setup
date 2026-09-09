@@ -1,9 +1,9 @@
 #!/command/with-contenv sh
 # shellcheck shell=sh
-# DAppNode cont-init hook. Runs as root during s6-overlay stage 2, AFTER
+# Dappnode cont-init hook. Runs as root during s6-overlay stage 2, AFTER
 # upstream's 01-hermes-setup (UID/GID remap, chown, config.yaml + .env + SOUL.md
 # seeding, schema migration, skills sync), 015-supervise-perms and
-# 02-reconcile-profiles. We only do the genuinely DAppNode-specific bits here;
+# 02-reconcile-profiles. We only do the genuinely Dappnode-specific bits here;
 # everything generic is already handled upstream.
 set -e
 
@@ -21,7 +21,7 @@ as_hermes() {
 # is root-owned, so this must run as root (here, not in a service).
 if [ -d /etc/profile.d ] && [ ! -f /etc/profile.d/hermes-venv.sh ]; then
     cat > /etc/profile.d/hermes-venv.sh <<'PROFILE'
-# DAppNode Hermes Agent: expose venv + HERMES_HOME to login shells (ttyd)
+# Dappnode Hermes Agent: expose venv + HERMES_HOME to login shells (ttyd)
 if [ -d "/opt/hermes/.venv/bin" ]; then
     export PATH="/opt/hermes/.venv/bin:$PATH"
     export VIRTUAL_ENV="/opt/hermes/.venv"
@@ -34,29 +34,29 @@ PROFILE
     chmod 0644 /etc/profile.d/hermes-venv.sh
 fi
 
-# --- Seed DAppNode context files (first boot only) --------------------------
+# --- Seed Dappnode context files (first boot only) --------------------------
 if [ ! -f "$HERMES_HOME/.hermes.md" ] && [ -f /opt/dappnode/hermes.md ]; then
     as_hermes cp /opt/dappnode/hermes.md "$HERMES_HOME/.hermes.md"
-    echo "[dappnode] Seeded .hermes.md with DAppNode context"
+    echo "[dappnode] Seeded .hermes.md with Dappnode context"
 fi
 if [ ! -d "$HERMES_HOME/skills/devops/dappnode" ] && [ -d /opt/dappnode/dappnode ]; then
     as_hermes mkdir -p "$HERMES_HOME/skills/devops/dappnode"
     as_hermes cp -r /opt/dappnode/dappnode/. "$HERMES_HOME/skills/devops/dappnode/"
-    echo "[dappnode] Seeded DAppNode skill"
+    echo "[dappnode] Seeded Dappnode skill"
 fi
 if [ ! -d "$HERMES_HOME/skills/devops/dappnode-nexus" ] && [ -d /opt/dappnode/dappnode-nexus ]; then
     as_hermes mkdir -p "$HERMES_HOME/skills/devops/dappnode-nexus"
     as_hermes cp -r /opt/dappnode/dappnode-nexus/. "$HERMES_HOME/skills/devops/dappnode-nexus/"
-    echo "[dappnode] Seeded DAppNode Nexus skill"
+    echo "[dappnode] Seeded Dappnode Nexus skill"
 fi
 
-# --- Repair .env for DAppNode defaults and older wizard output -------------
+# --- Repair .env for Dappnode defaults and older wizard output -------------
 # Upstream now rejects weak API_SERVER_KEY values and refuses to start
 # WhatsApp when WHATSAPP_ENABLED=true but no QR pairing exists yet.
 as_hermes "$INSTALL_DIR/.venv/bin/python3" /opt/dappnode/bootstrap-env.py \
     || echo "[dappnode] Warning: could not repair .env, continuing with defaults"
 
-# --- Patch config.yaml for DAppNode (LAN bind, ports, Nexus ctx length) -----
+# --- Patch config.yaml for Dappnode (LAN bind, ports, Nexus ctx length) -----
 # Run as hermes with the venv python so config.yaml stays hermes-owned.
 if [ -f "$HERMES_HOME/config.yaml" ]; then
     as_hermes "$INSTALL_DIR/.venv/bin/python3" /opt/dappnode/patch-config.py \

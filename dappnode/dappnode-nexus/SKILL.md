@@ -1,6 +1,6 @@
 ---
 name: dappnode-nexus
-description: DAppNode Nexus — Private AI Gateway for Builders. Knowledge about the Nexus platform, its architecture, API compatibility, context-length pitfalls, and integration with DAppNode infrastructure.
+description: Dappnode Nexus — Private AI Gateway for Builders. Knowledge about the Nexus platform, its architecture, API compatibility, context-length pitfalls, and integration with Dappnode infrastructure.
 category: devops
 tags:
   - dappnode
@@ -10,9 +10,9 @@ tags:
   - openai-compatible
 ---
 
-# DAppNode Nexus
+# Dappnode Nexus
 
-Nexus is DAppNode's **Private AI Gateway** — a unified, OpenAI-compatible API for accessing private and confidential AI models.
+Nexus is Dappnode's **Private AI Gateway** — a unified, OpenAI-compatible API for accessing private and confidential AI models.
 
 ## Core Value Proposition
 
@@ -23,7 +23,7 @@ Nexus is DAppNode's **Private AI Gateway** — a unified, OpenAI-compatible API 
 
 ## Architecture
 
-Nexus runs as a service within the DAppNode ecosystem. Users access it via:
+Nexus runs as a service within the Dappnode ecosystem. Users access it via:
 - **Web UI**: https://nexus.dappnode.com/
 - **API endpoint**: `https://nexus-api.dappnode.com/v1`
 
@@ -34,12 +34,14 @@ during setup:
 | Route | `model.base_url` | Who can read the prompt in transit |
 |---|---|---|
 | Direct | `https://nexus-api.dappnode.com/v1` | TLS terminates at Cloudflare, so prompts are visible there |
-| Private mode | `http://nexus-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the enclave |
+| Private mode | `http://nexus-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the TEE |
 
 Private mode routes through the **nexus-proxy** package on the same
-DAppNode. That proxy verifies the Nexus Gateway's AWS Nitro Enclave attestation
-against a pinned trust policy and encrypts request and response bodies with
-EHBP, so an intermediary that terminates TLS cannot read them.
+Dappnode. That proxy verifies that the Nexus Gateway is running in a TEE
+(trusted execution environment) and encrypts request and response bodies, so
+nobody in between — including whoever terminates TLS — can read them. The
+verification happens automatically on every connection; the user does not have
+to do anything, but can check the proof themselves.
 
 It **fails closed**: if the Gateway cannot be verified the proxy refuses to
 run, and Hermes gets connection errors rather than a silent downgrade to the
@@ -66,16 +68,15 @@ working. Install and start that package first.
 | Nexus API | https://nexus-api.dappnode.com/v1 |
 | Attested local proxy | http://nexus-proxy.dappnode.private:3301/v1 |
 | Proxy verification page | http://nexus-proxy.dappnode.private:3301/verification |
-| DAppNode Main Site | https://dappnode.com/ |
+| Dappnode Main Site | https://dappnode.com/ |
 
 ## Privacy Guarantees
 
-- Inference runs on DAppNode infrastructure, not external cloud providers
+- Inference runs on Dappnode infrastructure, not external cloud providers
 - Data does not leave the user's controlled environment
 - No logging or retention of prompts by default
 - With Private mode on, prompt and completion bodies are additionally encrypted
-  to a measured enclave, so the TLS terminator in front of the Gateway cannot
-  read them
+  to the TEE, so nobody in between can read them
 
 ## Pitfalls
 
@@ -87,7 +88,7 @@ When Nexus is configured as the Hermes provider (`nexus-api.dappnode.com`), Herm
 2. Hermes may skip provider-aware lookups (Anthropic API, models.dev, hardcoded defaults)
 3. Falls back to `DEFAULT_FALLBACK_CONTEXT = 256_000` tokens if auto-detection fails
 
-> **Update**: The `/v1/models` endpoint now returns `context_size` per model. The DAppNode package auto-sets `model.context_length` as a safety net, but you can verify with `hermes config show`.
+> **Update**: The `/v1/models` endpoint now returns `context_size` per model. The Dappnode package auto-sets `model.context_length` as a safety net, but you can verify with `hermes config show`.
 
 **Symptom**: Hermes compresses context early, treats a 1M-token model as 256K, or shows `context_length: 256000` in `/usage`.
 
@@ -110,4 +111,4 @@ Common Nexus-proxied models and their context lengths:
 | `minimax/minmax-m3` | 512,000 |
 | `nexus/auto` | Auto-routing (varies) |
 
-> **Note**: `/v1/models` endpoint is now publicly accessible and returns `context_size` per model. Hermes Agent can query this for auto-detection, but the DAppNode package also pre-sets a safe default.
+> **Note**: `/v1/models` endpoint is now publicly accessible and returns `context_size` per model. Hermes Agent can query this for auto-detection, but the Dappnode package also pre-sets a safe default.

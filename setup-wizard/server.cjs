@@ -442,7 +442,7 @@ async function probeNexusProxy() {
     const resp = await fetch(NEXUS_PROXY_HEALTH_URL, { signal: AbortSignal.timeout(4000) });
     if (!resp.ok) return { reachable: false, reason: `proxy returned HTTP ${resp.status}` };
   } catch {
-    return { reachable: false, reason: "nexus-proxy is not reachable on this DAppNode" };
+    return { reachable: false, reason: "nexus-proxy is not reachable on this Dappnode" };
   }
   // Reachable. Fold in the verification verdict when the proxy offers one, so
   // the switch can show what is actually being attested rather than just that
@@ -488,7 +488,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
   // Start Nexus Authgear login. The callback URI must be authorized in the
-  // Authgear application. For the DAppNode setup wizard this is normally:
+  // Authgear application. For the Dappnode setup wizard this is normally:
   // http://hermes-agent.dappnode:8080/nexus/auth/callback
   // Set NEXUS_AUTH_REDIRECT_URI only when serving the wizard through a proxy.
   if (req.method === "GET" && url.pathname === "/nexus/auth/start") {

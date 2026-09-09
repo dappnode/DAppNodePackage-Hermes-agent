@@ -1,12 +1,12 @@
 #!/command/with-contenv sh
 # shellcheck shell=sh
-# DAppNode setup wizard (config UI on :8080).
+# Dappnode setup wizard (config UI on :8080).
 #
 # Runs as ROOT, deliberately. Its /api/restart endpoint does
 # `process.kill(1, SIGTERM)` to restart the whole container so a freshly
 # saved config.yaml is re-applied by the cont-init hooks. Under s6-overlay
 # PID 1 is /init (root), so an unprivileged process can't signal it. The
-# wizard only serves an admin UI on the DAppNode private network and shells
+# wizard only serves an admin UI on the Dappnode private network and shells
 # out to the `hermes` CLI via s6-setuidgid (see server.cjs), so the hermes
 # runtime itself never runs as root.
 export HOME=/opt/data

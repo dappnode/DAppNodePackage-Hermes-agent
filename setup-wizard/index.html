@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hermes Agent — DAppNode</title>
+  <title>Hermes Agent — Dappnode</title>
   <style>
     :root {
       --primary: #FFD700;
@@ -913,40 +913,28 @@
 
       const proxy = state.proxy || {};
       sub.textContent = isPrivate
-        ? "On — prompts are encrypted to the attested enclave"
-        : "Off — prompts are readable where TLS terminates";
+        ? "On — only the TEE can read your prompts"
+        : "Off — your prompts can be read in transit";
 
       if (isPrivate) {
-        let evidence = "";
-        if (proxy.reachable && proxy.status) {
-          evidence = ` Proxy status: <strong>${escapeHtml(String(proxy.status))}</strong>.`;
-          if (proxy.sourceRevision) {
-            evidence += ` Verified Gateway build <code>${escapeHtml(String(proxy.sourceRevision).slice(0, 12))}</code>.`;
-          }
-        }
         detail.innerHTML =
-          "Prompts and completions go through <strong>nexus-proxy</strong> on this DAppNode, "
-          + "which checks the Gateway is the expected code running inside an AWS Nitro Enclave and "
-          + "encrypts bodies so the TLS terminator in front of Nexus cannot read them."
-          + evidence
-          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the verification evidence</a>.`;
+          "Your prompts are encrypted so only the TEE (trusted execution environment) running "
+          + "Nexus can read them &mdash; not Dappnode, not us, nobody in between. The proxy "
+          + "verifies it for you on every connection."
+          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`;
       } else {
         detail.innerHTML =
-          "Prompts travel to Nexus over ordinary HTTPS, which is decrypted at Cloudflare before it "
-          + "reaches the Gateway. Turn this on to route them through the attested proxy on this "
-          + "DAppNode instead. Your API key and model do not change.";
+          "Your prompts can be read on the way to Nexus. Turn this on to encrypt them so only "
+          + "the TEE can. Same API key, same model.";
       }
 
       if (!proxy.reachable) {
         toggle.disabled = true;
         nexusModeMessage(
-          "<strong>nexus-proxy is not reachable.</strong> Install and start the "
-          + "<strong>nexus-proxy</strong> package on this DAppNode to use private mode."
-          + (isPrivate
-            ? " Private mode is currently selected, so Hermes will report connection errors until "
-              + "the proxy is running — the proxy fails closed and never falls back to the "
-              + "unprotected path."
-            : ""),
+          (isPrivate
+            ? "Private mode is on, but the proxy is not running, so Hermes cannot reach Nexus. "
+            : "Private mode needs the Nexus Proxy package. ")
+          + `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Install it from the Dappstore</a>.`,
           isPrivate ? "err" : null
         );
       } else if (!_nexusModeBusy) {
@@ -997,7 +985,7 @@
         nexusModeMessage(
           "Restarting Hermes — this takes about 5–10 seconds. "
           + (enabled
-            ? "Prompts will be encrypted to the attested enclave once it is back."
+            ? "Your prompts will be encrypted to the TEE once it is back."
             : "Prompts will go directly to Nexus once it is back."),
           "ok"
         );
@@ -1093,6 +1081,8 @@
     const NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1";
     const NEXUS_PROXY_BASE_URL = "http://nexus-proxy.dappnode.private:3301/v1";
     const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-proxy.dappnode.private:3301/verification";
+    // Dappstore install page, the same URL the Dappnode installer links to.
+    const NEXUS_PROXY_INSTALL_URL = "http://my.dappnode/installer/dnp/nexus-proxy.dnp.dappnode.eth";
 
     // Whether the private-proxy toggle is on. Read through a helper so a
     // screen that has not rendered the checkbox yet still gets the default.
@@ -1108,12 +1098,12 @@
     }
 
     const PROVIDERS = [
-      { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
+      { id: "nexus", name: "Dappnode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
       { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
       { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
       { id: "google", name: "Google Gemini", desc: "Gemini 3 Pro, 2.5 Pro & Flash", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
-      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
+      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your Dappnode", tag: "Free", free: true, envKey: null, provider: "custom" },
       { id: "deepseek", name: "DeepSeek", desc: "V3.2, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
       { id: "huggingface", name: "Hugging Face", desc: "20+ open models via unified router", tag: "Free tier", free: true, envKey: "HF_TOKEN", provider: "huggingface" },
       { id: "copilot", name: "GitHub Copilot", desc: "GPT-5, Claude, Gemini via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
@@ -1261,8 +1251,8 @@
 
       if (p.id === "nexus") {
         container.innerHTML = `
-          <h2>Configure DAppNode Nexus</h2>
-          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
+          <h2>Configure Dappnode Nexus</h2>
+          <div class="subtitle">Dappnode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
           <div class="nexus-auth-panel">
             <button class="btn btn-primary" id="nexus-login-btn" onclick="startNexusLogin()">Login with Nexus &amp; create API key</button>
             <div class="nexus-auth-note">Creates a Nexus API key for this Hermes Agent account and fills it below. <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">Manage your keys</a>.</div>
@@ -1280,27 +1270,22 @@
           </div>
           <div class="field">
             <label>Private mode</label>
-            <div class="hint">Sends prompts through the attested local proxy instead of straight to Nexus. Requires the <strong>nexus-proxy</strong> package installed and running on this DAppNode.</div>
+            <div class="hint">Encrypts your prompts so only the TEE running Nexus can read them. Needs the <strong>Nexus Proxy</strong> package on this Dappnode.</div>
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
               <input type="checkbox" id="nexus-attested" style="width:auto;">
-              Route through the attested Nexus proxy on this DAppNode
+              Keep my prompts private
             </label>
             <div id="nexus-attested-notice"
               style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
-              <strong style="color:var(--primary);">&rarr; What this changes</strong><br>
-              Without it, your prompts travel to Nexus over ordinary HTTPS, which is decrypted at
-              Cloudflare before it reaches the Gateway. With it, the <strong>nexus-proxy</strong>
-              package on this DAppNode verifies that the Gateway is the expected code running inside an
-              AWS Nitro Enclave, and encrypts prompts and completions so Cloudflare cannot read them.
+              Your prompts get encrypted so only the TEE (trusted execution environment) running
+              Nexus can read them. We cannot read them, and neither can anyone in between. The proxy
+              verifies the TEE for you automatically, and you can
+              <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">check the proof</a>
+              yourself any time.
               <br><br>
-              <strong style="color:var(--primary);">&rarr; The trade-off</strong><br>
-              This package does not install the proxy for you &mdash; install
-              <strong>nexus-proxy</strong> first, or leave this off. The proxy also
-              <strong>fails closed</strong>: if it cannot verify the Gateway it refuses to run,
-              and Hermes will report connection errors until it recovers &mdash; there is no silent
-              fallback to the unprotected path. Check
-              <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">the verification page</a>
-              to see the current verdict and the evidence behind it.
+              Needs the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a>
+              package running here. If it cannot verify the TEE it stops instead of sending your
+              prompts unprotected.
             </div>
           </div>
         `;
@@ -1324,9 +1309,9 @@
       if (p.id === "ollama") {
         container.innerHTML = `
           <h2>Configure Ollama</h2>
-          <div class="subtitle">Ollama lets you run AI models locally on your DAppNode for free.</div>
+          <div class="subtitle">Ollama lets you run AI models locally on your Dappnode for free.</div>
           <button class="probe-btn" id="probe-btn" onclick="probeOllama()">
-            <span id="probe-icon">&#128269;</span> Auto-detect Ollama on DAppNode
+            <span id="probe-icon">&#128269;</span> Auto-detect Ollama on Dappnode
           </button>
           <div id="probe-result"></div>
           <div class="field">
@@ -1563,7 +1548,7 @@
             document.getElementById("ollama-model-input").value = data.models[0];
           }
         } else {
-          resultEl.innerHTML = `<div class="probe-result fail"><strong>No Ollama found.</strong> Make sure an Ollama package is installed and running on your DAppNode.</div>`;
+          resultEl.innerHTML = `<div class="probe-result fail"><strong>No Ollama found.</strong> Make sure an Ollama package is installed and running on your Dappnode.</div>`;
         }
       } catch {
         resultEl.innerHTML = `<div class="probe-result fail">Failed to probe. Enter the URL manually below.</div>`;
@@ -1656,7 +1641,7 @@
     function buildConfigYaml() {
       const p = selectedProvider;
       const lines = [
-        "# Hermes Agent Configuration (generated by DAppNode setup wizard)",
+        "# Hermes Agent Configuration (generated by Dappnode setup wizard)",
         "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
         "", "model:"
       ];
@@ -1711,10 +1696,10 @@
         lines.push(`  provider: "${p.provider}"`);
         if (p.id === "openrouter") lines.push(`  base_url: "https://openrouter.ai/api/v1"`);
       }
-      lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
+      lines.push("", "# Gateway settings (Dappnode)", "gateway:", "  port: 3000", "  bind: lan");
       lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
       lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
-      lines.push("", "# Platform settings (DAppNode)", "platforms:", "  whatsapp:", "    enabled: false", "    extra:", "      bridge_port: 3010");
+      lines.push("", "# Platform settings (Dappnode)", "platforms:", "  whatsapp:", "    enabled: false", "    extra:", "      bridge_port: 3010");
       lines.push("", "terminal:", '  backend: "local"', '  cwd: "."', "  timeout: 180");
       lines.push("", "agent:", "  max_turns: 60", '  reasoning_effort: "medium"');
       lines.push("", "memory:", "  memory_enabled: true", "  user_profile_enabled: true");

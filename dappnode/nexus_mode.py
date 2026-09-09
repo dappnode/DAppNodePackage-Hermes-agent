@@ -8,7 +8,7 @@ Nexus is reachable two ways, and the only difference between them is
            TLS terminates at Cloudflare, so prompts are readable there.
 
   private  http://nexus-proxy.dappnode.private:3301/v1
-           The nexus-proxy package on this DAppNode verifies the
+           The nexus-proxy package on this Dappnode verifies the
            Gateway's AWS Nitro attestation and encrypts request and response
            bodies with EHBP, so the TLS terminator cannot read them.
 
@@ -43,6 +43,10 @@ LEGACY_PROXY_HOSTS = ("nexus-local-proxy.dappnode.private",)
 NEXUS_DIRECT_BASE_URL = f"https://{NEXUS_DIRECT_HOST}/v1"
 NEXUS_PROXY_BASE_URL = f"http://{NEXUS_PROXY_HOST}:3301/v1"
 NEXUS_PROXY_VERIFICATION_URL = f"http://{NEXUS_PROXY_HOST}:3301/verification"
+# Dappstore page for the proxy package, the same URL the Dappnode installer
+# uses. It resolves once the package is published onchain.
+NEXUS_PROXY_DNP_NAME = "nexus-proxy.dnp.dappnode.eth"
+NEXUS_PROXY_INSTALL_URL = f"http://my.dappnode/installer/dnp/{NEXUS_PROXY_DNP_NAME}"
 
 MODE_DIRECT = "direct"
 MODE_PRIVATE = "private"
@@ -140,6 +144,7 @@ def read_state(path: Path | None = None) -> dict:
         "direct_base_url": NEXUS_DIRECT_BASE_URL,
         "private_base_url": NEXUS_PROXY_BASE_URL,
         "verification_url": NEXUS_PROXY_VERIFICATION_URL,
+        "install_url": NEXUS_PROXY_INSTALL_URL,
     }
 
 
