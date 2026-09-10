@@ -743,7 +743,7 @@
       <div class="nexus-mode-card" id="nexus-mode-card" hidden>
         <div class="nexus-mode-head">
           <div>
-            <div class="nexus-mode-title">Nexus privacy mode</div>
+            <div class="nexus-mode-title">Nexus confidentiality proofs</div>
             <div class="nexus-mode-sub" id="nexus-mode-sub">Checking…</div>
           </div>
           <label class="nexus-switch" title="Route Nexus through the attested local proxy">
@@ -756,7 +756,7 @@
       </div>
       <dialog class="nexus-confirm" id="nexus-confirm" aria-labelledby="nexus-confirm-title">
         <form method="dialog">
-          <h3 id="nexus-confirm-title">Turn on private mode?</h3>
+          <h3 id="nexus-confirm-title">Turn on confidentiality proofs?</h3>
           <p>Hermes needs to restart to apply this. It takes a few seconds, and a reply in progress will stop.</p>
           <div class="nexus-confirm-actions">
             <button class="btn btn-secondary" value="cancel">Cancel</button>
@@ -1053,36 +1053,24 @@
       const proxyUp = Boolean(proxy.reachable);
       card.classList.toggle("is-on", isPrivate && proxyUp);
       card.classList.toggle("is-down", isPrivate && !proxyUp);
-      sub.textContent = isPrivate
-        ? "On — encrypted all the way to Nexus"
-        : "Off — available on this Dappnode";
+      sub.textContent = isPrivate ? "On — proofs enabled" : "Off — proofs disabled";
 
-      if (isPrivate) {
-        detail.innerHTML =
-          "Your prompts stay encrypted until they reach Nexus, which runs in a TEE (trusted "
-          + "execution environment). Nobody in between can read them &mdash; not Dappnode, not us. "
-          + "The proxy checks this on every connection."
-          + ` <a href="${escapeHtml(state.verification_url || "")}" target="_blank">See the proof</a>.`
-          + '<div class="nexus-mode-tip">'
-          + "Pick a model whose id starts with <code>private/</code> and it stays encrypted "
-          + "all the way to the model too. Other models are run by their provider, which sees "
-          + "the prompt to answer it.</div>"
-          + '<div class="nexus-mode-limits">'
-          + "<strong>Auto Router</strong> and <strong>PII masking</strong> do not work in "
-          + "private mode.</div>";
-      } else {
-        detail.innerHTML =
-          "Turn this on to keep your prompts encrypted all the way to Nexus, which runs in a TEE "
-          + "(trusted execution environment). Same API key, same models, same prices &mdash; the "
-          + "proxy handles the verification for you.";
-      }
+      const proxyLink = `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Nexus Proxy</a>`;
+      const proofsLink = `<a href="${escapeHtml(state.verification_url || "")}" target="_blank">See proofs here</a>`;
+      detail.innerHTML = isPrivate
+        ? `You can generate verifiable confidentiality proofs and receive them in ${proxyLink}. `
+          + "Deactivate if you don't want to receive the proofs, but the service will still be confidential. "
+          + proofsLink + "."
+        : `You can generate verifiable confidentiality proofs and receive them in ${proxyLink}. `
+          + "Activate to start receiving them; the service is confidential either way. "
+          + proofsLink + ".";
 
       if (!proxy.reachable) {
         toggle.disabled = true;
         nexusModeMessage(
           (isPrivate
-            ? "Private mode is on, but the proxy is not running, so Hermes cannot reach Nexus. "
-            : "Private mode needs the Nexus Proxy package. ")
+            ? "Proofs are on, but the Nexus Proxy is not running, so Hermes cannot reach Nexus. "
+            : "Confidentiality proofs need the Nexus Proxy package. ")
           + `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Install it from the Dappstore</a>.`,
           isPrivate ? "err" : null
         );
@@ -1160,7 +1148,7 @@
       e.target.checked = !wanted;
       _nexusPending = wanted;
       document.getElementById("nexus-confirm-title").textContent =
-        wanted ? "Turn on private mode?" : "Turn off private mode?";
+        wanted ? "Turn on confidentiality proofs?" : "Turn off confidentiality proofs?";
       nexusConfirm.returnValue = "";
       nexusConfirm.showModal();
     });
@@ -1187,6 +1175,8 @@
     const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-proxy.dappnode.private:3301/verification";
     // Dappstore install page, the same URL the Dappnode installer links to.
     const NEXUS_PROXY_INSTALL_URL = "http://my.dappnode/installer/dnp/nexus-proxy.dnp.dappnode.eth";
+    // Explains which models the confidentiality proofs cover end to end.
+    const NEXUS_MODELS_DOC_URL = "https://nexus.dappnode.com/docs/guides/private-vs-anonymous-models";
 
     // Whether the private-proxy toggle is on. Read through a helper so a
     // screen that has not rendered the checkbox yet still gets the default.
@@ -1381,31 +1371,19 @@
             <div id="nexus-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from Nexus...</div></div>
           </div>
           <div class="field">
-            <label>Private mode</label>
-            <div class="hint">Optional. Keeps your prompts encrypted all the way to Nexus, which runs in a TEE.</div>
+            <label>Nexus confidentiality proofs</label>
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
               <input type="checkbox" id="nexus-attested" style="width:auto;">
-              Keep my prompts private
+              Get verifiable confidentiality proofs
             </label>
             <div id="nexus-attested-notice"
-              style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
-              Your prompts stay encrypted until they reach Nexus, which runs in a TEE (trusted
-              execution environment) &mdash; nobody in between can read them. The proxy verifies it
-              automatically, and you can
-              <a href="${NEXUS_PROXY_VERIFICATION_URL}" target="_blank" style="color:var(--primary)">check the proof</a>
-              yourself. Same API key, same models, same prices.
-              <br><br>
-              Needs the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a>
-              package running here. For the whole path, pick a model whose id starts with
-              <strong>private/</strong> &mdash; those run inside a TEE too.
-              <strong>Auto Router</strong> and <strong>PII masking</strong> do not work in
-              private mode. If the TEE cannot be verified, requests stop.
+              style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:8px; font-size:0.85rem; line-height:1.55;">
+              <p style="margin:0 0 8px">Nexus is a privacy-preserving confidential AI provider. Your prompts are always private to us. We run our services in a TEE (Trusted Execution Environment) that can generate a verifiable proof of this confidentiality.</p>
+              <p style="margin:0 0 8px">Check this box to automatically send the proof request with your regular prompts. You will receive the proofs in the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a> package.</p>
+              <p style="margin:0">These proofs are valid for the Nexus services and won't make your requests to Anonymous models confidential to the model provider. For end-to-end verification of confidentiality, use the Nexus Proxy (this box) and Private models. <a href="${NEXUS_MODELS_DOC_URL}" target="_blank" style="color:var(--primary)">Read more about Anonymous vs. Private models</a>.</p>
             </div>
           </div>
         `;
-        document.getElementById("nexus-attested").addEventListener("change", (e) => {
-          document.getElementById("nexus-attested-notice").style.display = e.target.checked ? "block" : "none";
-        });
         // Seed the checkbox from the mode actually in force. Without this,
         // re-running the wizard with private mode on would silently write the
         // direct endpoint back, downgrading the user without telling them.
@@ -1414,7 +1392,6 @@
           const box = document.getElementById("nexus-attested");
           if (!box) return;
           box.checked = true;
-          document.getElementById("nexus-attested-notice").style.display = "block";
         }).catch(() => {});
         fetchNexusModels();
         return;
