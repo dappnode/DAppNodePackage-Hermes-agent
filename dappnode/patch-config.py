@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch a freshly-seeded Hermes config.yaml for the DAppNode environment.
+"""Patch a freshly-seeded Hermes config.yaml for the Dappnode environment.
 
 Run as the `hermes` user from the 10-dappnode-setup cont-init hook, AFTER
 upstream's stage2-hook has seeded config.yaml from cli-config.yaml.example
@@ -19,15 +19,32 @@ dashboard_login_path = hermes_home / "dashboard-login.txt"
 skip_dashboard_auth = os.environ.get("DAPPNODE_SKIP_DASHBOARD_AUTH") == "1"
 
 
-def fetch_nexus_context_size(base_url, model_id):
-    """Return the context_size Nexus reports for model_id, or None.
+# Nexus is reachable either directly or through the attested local proxy. Both
+# expose the same OpenAI-compatible catalog, and the model ids are identical.
+# The endpoints and the direct/private distinction live in nexus_mode so the
+# boot-time patch and the runtime switch cannot drift apart.
+from nexus_mode import (  # noqa: E402
+    NEXUS_DIRECT_BASE_URL,
+    is_nexus_base_url,
+    migrate_legacy_host,
+)
 
-    Queries the OpenAI-compatible ``{base_url}/models`` listing, which Nexus
-    serves publicly with a ``context_size`` field per model.
-    """
+
+# Cloudflare fronts nexus-api.dappnode.com and 403s the default
+# ``Python-urllib/<ver>`` User-Agent, so this fetch silently failed and every
+# Nexus user fell back to Hermes' 256K default. Upstream Hermes guards against
+# the same WAF behaviour in providers/base.py. Send a real UA.
+CATALOG_USER_AGENT = "hermes-agent-dappnode/1.0"
+
+
+def _context_size_from(base_url, model_id):
+    """Return the context_size the catalog at base_url reports, or None."""
     url = base_url.rstrip("/") + "/models"
     try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json", "User-Agent": CATALOG_USER_AGENT},
+        )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.load(resp)
     except Exception:
@@ -37,6 +54,23 @@ def fetch_nexus_context_size(base_url, model_id):
             size = m.get("context_size")
             return int(size) if size else None
     return None
+
+
+def fetch_nexus_context_size(base_url, model_id):
+    """Return the context_size Nexus reports for model_id, or None.
+
+    Tries the configured endpoint first, then the public Nexus catalog. The
+    fallback matters when Hermes points at the local proxy: proxy releases
+    before 0.1.1 serve only chat completions and 404 on ``/models``, and the
+    catalog is public either way, so there is nothing private to lose by
+    asking the direct endpoint for it.
+    """
+    size = _context_size_from(base_url, model_id)
+    if size:
+        return size
+    if base_url.rstrip("/") == NEXUS_DIRECT_BASE_URL:
+        return None
+    return _context_size_from(NEXUS_DIRECT_BASE_URL, model_id)
 
 
 def read_dashboard_password(username):
@@ -94,9 +128,9 @@ def configure_dashboard_auth(config):
     if password and has_config_password:
         return False
 
-    # If Hermes already has only a password hash but DAppNode has no saved
+    # If Hermes already has only a password hash but Dappnode has no saved
     # plaintext credential, the setup wizard cannot perform its auto-login
-    # handoff. Generate a new DAppNode-managed password and keep both files in
+    # handoff. Generate a new Dappnode-managed password and keep both files in
     # sync so users are not stranded at the raw dashboard login screen.
     password = password or secrets.token_urlsafe(24)
 
@@ -124,7 +158,7 @@ except FileNotFoundError:
 except Exception:
     config = {}
 
-# --- Network access: bind the gateway to the LAN on the DAppNode port ---
+# --- Network access: bind the gateway to the LAN on the Dappnode port ---
 gw = config.setdefault("gateway", {})
 gw["port"] = 3000
 gw["bind"] = "lan"
@@ -153,16 +187,24 @@ if isinstance(platforms, dict):
 with open(config_path, "w") as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 dashboard_auth_status = "skipped" if skip_dashboard_auth else "basic"
-msg = f"Patched config.yaml for DAppNode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
+msg = f"Patched config.yaml for Dappnode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
 if generated_dashboard_auth:
     msg += "; dashboard credentials saved to /opt/data/dashboard-login.txt"
 print(msg)
 
+# --- Nexus proxy rename: repoint configs written before DNP_NEXUS_PROXY ---
+# The old nexus-local-proxy.dappnode.private host no longer resolves, so a
+# config still naming it would leave private mode permanently failing. Rewrite
+# it before the context-length lookup below reads base_url.
+if migrate_legacy_host(config_path):
+    config = yaml.safe_load(open(config_path)) or {}
+    print("Nexus: repointed the proxy host to nexus-proxy.dappnode.private")
+
 # --- Nexus context length: source the real value from /v1/models ---
-# nexus-api.dappnode.com is not in Hermes' URL-to-provider map, so the agent
-# cannot auto-detect a model's context window and falls back to 256K. Rather
-# than hardcode a single number (wrong for the smaller models -- e.g. Kimi is
-# 262K, MiniMax M2.7 is 205K), query the endpoint Nexus already exposes:
+# Neither Nexus endpoint is in Hermes' URL-to-provider map, so the agent cannot
+# auto-detect a model's context window and falls back to 256K. Rather than
+# hardcode a single number (wrong for the smaller models -- e.g. Kimi is 262K,
+# MiniMax M2.7 is 205K), query the endpoint Nexus already exposes:
 # GET /v1/models returns `context_size` per model. Set model.context_length to
 # that authoritative value for the configured model.
 model_section = config.setdefault("model", {})
@@ -170,7 +212,7 @@ provider = model_section.get("provider", "")
 base_url = str(model_section.get("base_url", ""))
 model_id = model_section.get("default") or model_section.get("model") or ""
 
-if provider == "custom" and "nexus-api.dappnode.com" in base_url and model_id:
+if provider == "custom" and is_nexus_base_url(base_url) and model_id:
     ctx = fetch_nexus_context_size(base_url, model_id)
     if ctx and model_section.get("context_length") != ctx:
         model_section["context_length"] = ctx

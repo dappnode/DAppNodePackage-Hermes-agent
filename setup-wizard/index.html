@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hermes Agent — DAppNode</title>
+  <title>Hermes Agent — Dappnode</title>
   <style>
     :root {
       --primary: #FFD700;
@@ -423,6 +423,11 @@
       color: var(--text);
     }
 
+    .model-suggestions .sg-item .sg-private {
+      margin-left: 8px; padding: 1px 6px; border-radius: 4px;
+      font-size: 0.7rem; letter-spacing: 0.02em;
+      background: rgba(255, 215, 0, 0.18); color: var(--primary, #FFD700);
+    }
     .model-suggestions .sg-item .sg-ctx {
       color: var(--text-muted);
       font-size: 0.75rem;
@@ -605,6 +610,98 @@
       border-radius: 4px;
       font-size: 0.8rem;
     }
+
+    /* ---- Nexus privacy mode switch ---- */
+    .nexus-mode-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem 1.15rem;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    /* On and working: a quiet gold edge, so the state reads at a glance */
+    .nexus-mode-card.is-on {
+      border-color: rgba(255, 215, 0, 0.3);
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+    .nexus-mode-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .nexus-mode-title { font-weight: 600; font-size: 1rem; }
+    .nexus-mode-sub {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 4px; font-size: 0.85rem; color: var(--text-muted);
+    }
+    .nexus-mode-sub::before {
+      content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted); opacity: 0.55;
+    }
+    .nexus-mode-card.is-on .nexus-mode-sub { color: var(--text); }
+    .nexus-mode-card.is-on .nexus-mode-sub::before {
+      background: var(--success); opacity: 1; box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+    }
+    .nexus-mode-card.is-down .nexus-mode-sub::before {
+      background: var(--error); opacity: 1; box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
+    }
+    .nexus-mode-detail {
+      margin-top: 0.85rem;
+      font-size: 0.88rem; line-height: 1.6; color: var(--text-muted);
+    }
+    .nexus-mode-detail a, .nexus-mode-msg a {
+      color: var(--primary); font-weight: 500; text-decoration: none; white-space: nowrap;
+    }
+    .nexus-mode-detail a:hover, .nexus-mode-msg a:hover { text-decoration: underline; }
+    .nexus-mode-tip {
+      margin-top: 0.8rem; padding: 0.6rem 0.8rem;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.85rem; line-height: 1.55;
+    }
+    .nexus-mode-tip code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem;
+      padding: 1px 6px; border-radius: 4px;
+      background: rgba(255, 215, 0, 0.12); color: var(--primary);
+    }
+    .nexus-mode-limits { margin-top: 0.55rem; font-size: 0.8rem; color: var(--text-muted); }
+    .nexus-mode-limits strong { color: var(--text); font-weight: 600; }
+    .nexus-mode-msg {
+      margin-top: 0.85rem; padding: 0.6rem 0.8rem; border-radius: 8px;
+      font-size: 0.85rem; line-height: 1.5; color: var(--text);
+      background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border);
+    }
+    .nexus-mode-msg.err { background: rgba(248, 113, 113, 0.08); border-color: rgba(248, 113, 113, 0.35); }
+    .nexus-mode-msg.ok  { background: rgba(52, 211, 153, 0.08); border-color: rgba(52, 211, 153, 0.35); }
+    .nexus-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex: none; }
+    .nexus-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .nexus-slider {
+      position: absolute; inset: 0; cursor: pointer; border-radius: 24px;
+      background: #3a3f55; transition: background 0.2s, box-shadow 0.2s;
+    }
+    .nexus-slider::before {
+      content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .nexus-switch input:checked + .nexus-slider { background: var(--primary); }
+    .nexus-switch input:checked + .nexus-slider::before { transform: translateX(20px); background: var(--card); }
+    .nexus-switch input:focus-visible + .nexus-slider { box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35); }
+    /* Explicit disabled colours: dimming gold with opacity turned it olive */
+    .nexus-switch input:disabled + .nexus-slider { cursor: not-allowed; background: #2a2e40; }
+    .nexus-switch input:disabled + .nexus-slider::before { background: #5b6075; box-shadow: none; }
+    .nexus-confirm {
+      /* The page's `* { margin: 0 }` reset strips the margin:auto that centres a
+         modal <dialog>, which pinned it to the top-left corner. */
+      margin: auto;
+      padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--card); color: var(--text);
+      width: min(420px, calc(100vw - 2rem));
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    .nexus-confirm::backdrop { background: rgba(8, 10, 16, 0.65); backdrop-filter: blur(2px); }
+    .nexus-confirm form { padding: 1.25rem 1.35rem 1.1rem; }
+    .nexus-confirm h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+    .nexus-confirm p { margin: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.55; }
+    .nexus-confirm-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+    .nexus-confirm-actions .btn { margin: 0; }
   </style>
 </head>
 
@@ -641,6 +738,33 @@
           <div class="value" id="st-model">—</div>
         </div>
       </div>
+      <!-- Nexus privacy mode: a runtime switch, not a setup-time choice.
+           Only base_url changes, so the key, provider and model stay put. -->
+      <div class="nexus-mode-card" id="nexus-mode-card" hidden>
+        <div class="nexus-mode-head">
+          <div>
+            <div class="nexus-mode-title">Nexus confidentiality proofs</div>
+            <div class="nexus-mode-sub" id="nexus-mode-sub">Checking…</div>
+          </div>
+          <label class="nexus-switch" title="Route Nexus through the attested local proxy">
+            <input type="checkbox" id="nexus-mode-toggle" disabled>
+            <span class="nexus-slider"></span>
+          </label>
+        </div>
+        <div class="nexus-mode-detail" id="nexus-mode-detail"></div>
+        <div class="nexus-mode-msg" id="nexus-mode-msg" hidden></div>
+      </div>
+      <dialog class="nexus-confirm" id="nexus-confirm" aria-labelledby="nexus-confirm-title">
+        <form method="dialog">
+          <h3 id="nexus-confirm-title">Turn on confidentiality proofs?</h3>
+          <p>Hermes needs to restart to apply this. It takes a few seconds, and a reply in progress will stop.</p>
+          <div class="nexus-confirm-actions">
+            <button class="btn btn-secondary" value="cancel">Cancel</button>
+            <button class="btn btn-primary" value="confirm">Restart Hermes</button>
+          </div>
+        </form>
+      </dialog>
+
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
         <a href="#" onclick="event.preventDefault(); switchTab('setup')">
@@ -824,6 +948,7 @@
       }
       if (name === "dashboard") {
         refreshDashboard();
+        refreshNexusMode();
       } else {
         // Stop polling when leaving dashboard
         if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
@@ -892,15 +1017,187 @@
     refreshDashboard();
 
     // =========================================================================
+    // Nexus privacy mode (runtime switch)
+    // =========================================================================
+    // Direct and private are the same account, the same key and the same model
+    // ids -- only model.base_url differs. So this is a switch, not a
+    // reconfiguration: nothing is re-entered and the provider never changes.
+
+    let _nexusModeBusy = false;
+
+    function nexusModeMessage(text, kind) {
+      const el = document.getElementById("nexus-mode-msg");
+      if (!el) return;
+      if (!text) { el.hidden = true; el.textContent = ""; return; }
+      el.hidden = false;
+      el.className = "nexus-mode-msg" + (kind ? " " + kind : "");
+      el.innerHTML = text;
+    }
+
+    function renderNexusMode(state) {
+      const card = document.getElementById("nexus-mode-card");
+      const toggle = document.getElementById("nexus-mode-toggle");
+      const sub = document.getElementById("nexus-mode-sub");
+      const detail = document.getElementById("nexus-mode-detail");
+      if (!card || !toggle) return;
+
+      // Not pointed at Nexus at all -- the switch would be meaningless.
+      if (!state || !state.is_nexus) { card.hidden = true; return; }
+      card.hidden = false;
+
+      const isPrivate = state.mode === "private";
+      toggle.checked = isPrivate;
+      toggle.disabled = _nexusModeBusy;
+
+      const proxy = state.proxy || {};
+      const proxyUp = Boolean(proxy.reachable);
+      card.classList.toggle("is-on", isPrivate && proxyUp);
+      card.classList.toggle("is-down", isPrivate && !proxyUp);
+      sub.textContent = isPrivate ? "On — proofs enabled" : "Off — proofs disabled";
+
+      const proxyLink = `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Nexus Proxy</a>`;
+      const proofsLink = `<a href="${escapeHtml(state.verification_url || "")}" target="_blank">See proofs here</a>`;
+      detail.innerHTML = isPrivate
+        ? `You can generate verifiable confidentiality proofs and receive them in ${proxyLink}. `
+          + "Deactivate if you don't want to receive the proofs, but the service will still be confidential. "
+          + proofsLink + "."
+        : `You can generate verifiable confidentiality proofs and receive them in ${proxyLink}. `
+          + "Activate to start receiving them; the service is confidential either way. "
+          + proofsLink + ".";
+
+      if (!proxy.reachable) {
+        toggle.disabled = true;
+        nexusModeMessage(
+          (isPrivate
+            ? "Proofs are on, but the Nexus Proxy is not running, so Hermes cannot reach Nexus. "
+            : "Confidentiality proofs need the Nexus Proxy package. ")
+          + `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Install it from the Dappstore</a>.`,
+          isPrivate ? "err" : null
+        );
+      } else if (!_nexusModeBusy) {
+        nexusModeMessage(null);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+      ));
+    }
+
+    async function refreshNexusMode() {
+      try {
+        const resp = await fetch("/api/nexus/mode");
+        renderNexusMode(await resp.json());
+      } catch {
+        const card = document.getElementById("nexus-mode-card");
+        if (card) card.hidden = true;
+      }
+    }
+
+    async function setNexusMode(enabled) {
+      const toggle = document.getElementById("nexus-mode-toggle");
+      _nexusModeBusy = true;
+      if (toggle) toggle.disabled = true;
+      nexusModeMessage("Restarting Hermes…");
+      try {
+        const resp = await fetch("/api/nexus/mode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: enabled ? "private" : "direct" })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          nexusModeMessage(escapeHtml(data.error || "Could not switch mode"), "err");
+          return;
+        }
+        if (toggle) toggle.checked = enabled;
+        // Hermes reads config.yaml at startup, so the new mode applies on restart.
+        await fetch("/api/restart", { method: "POST" });
+        await waitForHermes();
+        nexusModeMessage(null);
+        refreshNexusMode();
+        refreshDashboard();
+      } catch (err) {
+        nexusModeMessage(escapeHtml(err.message || "Could not switch mode"), "err");
+      } finally {
+        _nexusModeBusy = false;
+        if (toggle) toggle.disabled = false;
+      }
+    }
+
+    // The wizard runs in the same container, so it disappears during the restart
+    // too. Poll until the API server answers rather than guessing a delay.
+    async function waitForHermes() {
+      await new Promise((r) => setTimeout(r, 3000));
+      for (let i = 0; i < 40; i++) {
+        try {
+          const r = await fetch("/api/health", { cache: "no-store" });
+          if (r.ok && (await r.json()).apiServer) return;
+        } catch { /* still restarting */ }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+
+    // Switching restarts Hermes, which cuts off a reply in progress, so ask first.
+    // The switch snaps back until the user confirms.
+    const nexusConfirm = document.getElementById("nexus-confirm");
+    let _nexusPending = null;
+    document.getElementById("nexus-mode-toggle").addEventListener("change", (e) => {
+      const wanted = e.target.checked;
+      e.target.checked = !wanted;
+      _nexusPending = wanted;
+      document.getElementById("nexus-confirm-title").textContent =
+        wanted ? "Turn on confidentiality proofs?" : "Turn off confidentiality proofs?";
+      nexusConfirm.returnValue = "";
+      nexusConfirm.showModal();
+    });
+    // A click on the backdrop lands on the dialog itself (the form fills the box).
+    nexusConfirm.addEventListener("click", (e) => { if (e.target === nexusConfirm) nexusConfirm.close("cancel"); });
+    nexusConfirm.addEventListener("close", () => {
+      const wanted = _nexusPending;
+      _nexusPending = null;
+      if (nexusConfirm.returnValue === "confirm" && wanted !== null) setNexusMode(wanted);
+    });
+
+    refreshNexusMode();
+
+    // =========================================================================
     // Provider definitions
     // =========================================================================
+
+    // Nexus can be reached two ways. The direct endpoint terminates TLS at
+    // Cloudflare, so prompts are readable there. The local proxy verifies the
+    // Gateway's AWS Nitro attestation and encrypts bodies end-to-end past that
+    // point, at the cost of a hard dependency on nexus-proxy running.
+    const NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1";
+    const NEXUS_PROXY_BASE_URL = "http://nexus-proxy.dappnode.private:3301/v1";
+    const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-proxy.dappnode.private:3301/verification";
+    // Dappstore install page, the same URL the Dappnode installer links to.
+    const NEXUS_PROXY_INSTALL_URL = "http://my.dappnode/installer/dnp/nexus-proxy.dnp.dappnode.eth";
+    // Explains which models the confidentiality proofs cover end to end.
+    const NEXUS_MODELS_DOC_URL = "https://nexus.dappnode.com/docs/sdk/private-vs-anonymous-models";
+
+    // Whether the private-proxy toggle is on. Read through a helper so a
+    // screen that has not rendered the checkbox yet still gets the default.
+    // Off by default: the proxy fails closed, so opting in should be a
+    // deliberate choice made after reading what it changes.
+    function nexusUseProxy() {
+      const el = document.getElementById("nexus-attested");
+      return el ? el.checked : false;
+    }
+
+    function nexusBaseUrl() {
+      return nexusUseProxy() ? NEXUS_PROXY_BASE_URL : NEXUS_DIRECT_BASE_URL;
+    }
+
     const PROVIDERS = [
-      { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
+      { id: "nexus", name: "Dappnode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
       { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
       { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
       { id: "google", name: "Google Gemini", desc: "Gemini 3 Pro, 2.5 Pro & Flash", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
-      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
+      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your Dappnode", tag: "Free", free: true, envKey: null, provider: "custom" },
       { id: "deepseek", name: "DeepSeek", desc: "V3.2, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
       { id: "huggingface", name: "Hugging Face", desc: "20+ open models via unified router", tag: "Free tier", free: true, envKey: "HF_TOKEN", provider: "huggingface" },
       { id: "copilot", name: "GitHub Copilot", desc: "GPT-5, Claude, Gemini via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
@@ -1020,7 +1317,15 @@
           const ctx = (typeof m === "object" && m.context_length) ? (Math.round(m.context_length / 1000) + "k ctx") : "";
           const div = document.createElement("div");
           div.className = "sg-item";
-          div.innerHTML = `<span class="sg-id">${id}</span>${ctx ? `<span class="sg-ctx">${ctx}</span>` : ""}`;
+          // Badge on the attested-transport property the catalog reports, not on
+          // the id: the private/ prefix is a naming convention, and labelling a
+          // model "private" because of its name would be a claim we cannot back.
+          // Fall back to the prefix only for the static offline suggestion list.
+          const attested = (typeof m === "object" && "attested" in m)
+            ? m.attested
+            : String(id).startsWith("private/");
+          const priv = attested ? `<span class="sg-private">private</span>` : "";
+          div.innerHTML = `<span class="sg-id">${id}</span>${priv}${ctx ? `<span class="sg-ctx">${ctx}</span>` : ""}`;
           div.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = id; dropdown.classList.remove("open"); });
           dropdown.appendChild(div);
         });
@@ -1048,8 +1353,8 @@
 
       if (p.id === "nexus") {
         container.innerHTML = `
-          <h2>Configure DAppNode Nexus</h2>
-          <div class="subtitle">DAppNode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
+          <h2>Configure Dappnode Nexus</h2>
+          <div class="subtitle">Dappnode's privacy-focused AI gateway. Your prompts are never logged, stored, or used for training.</div>
           <div class="nexus-auth-panel">
             <button class="btn btn-primary" id="nexus-login-btn" onclick="startNexusLogin()">Login with Nexus &amp; create API key</button>
             <div class="nexus-auth-note">Creates a Nexus API key for this Hermes Agent account and fills it below. <a href="https://nexus.dappnode.com/api-keys" target="_blank" style="color:var(--primary)">Manage your keys</a>.</div>
@@ -1062,10 +1367,32 @@
           </div>
           <div class="field">
             <label>Model</label>
-            <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>.</div>
+            <div class="hint">Models are fetched live from Nexus. Browse all at <a href="https://nexus.dappnode.com/models" target="_blank" style="color:var(--primary)">nexus.dappnode.com/models</a>. Models marked <strong>private</strong> run inside a TEE, so with private mode on your prompt stays encrypted the whole way.</div>
             <div id="nexus-model-container"><div class="model-suggestions sg-loading" style="display:block;position:static">Loading models from Nexus...</div></div>
           </div>
+          <div class="field">
+            <label>Nexus confidentiality proofs</label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+              <input type="checkbox" id="nexus-attested" style="width:auto;">
+              Get verifiable confidentiality proofs
+            </label>
+            <div id="nexus-attested-notice"
+              style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:8px; font-size:0.85rem; line-height:1.55;">
+              <p style="margin:0 0 8px">Nexus is a privacy-preserving confidential AI provider. Your prompts are always private to us. We run our services in a TEE (Trusted Execution Environment) that can generate a verifiable proof of this confidentiality.</p>
+              <p style="margin:0 0 8px">Check this box to automatically send the proof request with your regular prompts. You will receive the proofs in the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a> package.</p>
+              <p style="margin:0">These proofs are valid for the Nexus services and won't make your requests to Anonymous models confidential to the model provider. For end-to-end verification of confidentiality, use the Nexus Proxy (this box) and Private models. <a href="${NEXUS_MODELS_DOC_URL}" target="_blank" style="color:var(--primary)">Read more about Anonymous vs. Private models</a>.</p>
+            </div>
+          </div>
         `;
+        // Seed the checkbox from the mode actually in force. Without this,
+        // re-running the wizard with private mode on would silently write the
+        // direct endpoint back, downgrading the user without telling them.
+        fetch("/api/nexus/mode").then(r => r.json()).then((state) => {
+          if (!state || state.mode !== "private") return;
+          const box = document.getElementById("nexus-attested");
+          if (!box) return;
+          box.checked = true;
+        }).catch(() => {});
         fetchNexusModels();
         return;
       }
@@ -1073,9 +1400,9 @@
       if (p.id === "ollama") {
         container.innerHTML = `
           <h2>Configure Ollama</h2>
-          <div class="subtitle">Ollama lets you run AI models locally on your DAppNode for free.</div>
+          <div class="subtitle">Ollama lets you run AI models locally on your Dappnode for free.</div>
           <button class="probe-btn" id="probe-btn" onclick="probeOllama()">
-            <span id="probe-icon">&#128269;</span> Auto-detect Ollama on DAppNode
+            <span id="probe-icon">&#128269;</span> Auto-detect Ollama on Dappnode
           </button>
           <div id="probe-result"></div>
           <div class="field">
@@ -1312,7 +1639,7 @@
             document.getElementById("ollama-model-input").value = data.models[0];
           }
         } else {
-          resultEl.innerHTML = `<div class="probe-result fail"><strong>No Ollama found.</strong> Make sure an Ollama package is installed and running on your DAppNode.</div>`;
+          resultEl.innerHTML = `<div class="probe-result fail"><strong>No Ollama found.</strong> Make sure an Ollama package is installed and running on your Dappnode.</div>`;
         }
       } catch {
         resultEl.innerHTML = `<div class="probe-result fail">Failed to probe. Enter the URL manually below.</div>`;
@@ -1361,7 +1688,7 @@
       if (p.id === "nexus") {
         const apiKey = (document.getElementById("api-key").value || "").trim();
         if (apiKey) env.NEXUS_API_KEY = apiKey;
-        env.OPENAI_BASE_URL = "https://nexus-api.dappnode.com/v1";
+        env.OPENAI_BASE_URL = nexusBaseUrl();
         env.OPENAI_API_KEY = apiKey;
         env.LLM_MODEL = getModelValue() || "deepseek/deepseek-v4-pro";
       } else if (p.id === "ollama") {
@@ -1405,7 +1732,7 @@
     function buildConfigYaml() {
       const p = selectedProvider;
       const lines = [
-        "# Hermes Agent Configuration (generated by DAppNode setup wizard)",
+        "# Hermes Agent Configuration (generated by Dappnode setup wizard)",
         "# Edit via this wizard, the Terminal tab, or /opt/data/config.yaml directly.",
         "", "model:"
       ];
@@ -1413,7 +1740,7 @@
         const model = getModelValue() || "deepseek/deepseek-v4-pro";
         lines.push(`  default: "${model}"`);
         lines.push(`  provider: "custom"`);
-        lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
+        lines.push(`  base_url: "${nexusBaseUrl()}"`);
         // Hermes reads the key for a custom endpoint from model.api_key in
         // config.yaml (the documented source of truth). The NEXUS_API_KEY /
         // OPENAI_API_KEY env vars are not a reliable path: NEXUS_API_KEY is
@@ -1460,10 +1787,10 @@
         lines.push(`  provider: "${p.provider}"`);
         if (p.id === "openrouter") lines.push(`  base_url: "https://openrouter.ai/api/v1"`);
       }
-      lines.push("", "# Gateway settings (DAppNode)", "gateway:", "  port: 3000", "  bind: lan");
+      lines.push("", "# Gateway settings (Dappnode)", "gateway:", "  port: 3000", "  bind: lan");
       lines.push("  controlUi:", "    dangerouslyAllowHostHeaderOriginFallback: true");
       lines.push("    allowInsecureAuth: true", "    dangerouslyDisableDeviceAuth: true");
-      lines.push("", "# Platform settings (DAppNode)", "platforms:", "  whatsapp:", "    enabled: false", "    extra:", "      bridge_port: 3010");
+      lines.push("", "# Platform settings (Dappnode)", "platforms:", "  whatsapp:", "    enabled: false", "    extra:", "      bridge_port: 3010");
       lines.push("", "terminal:", '  backend: "local"', '  cwd: "."', "  timeout: 180");
       lines.push("", "agent:", "  max_turns: 60", '  reasoning_effort: "medium"');
       lines.push("", "memory:", "  memory_enabled: true", "  user_profile_enabled: true");

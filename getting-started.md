@@ -1,6 +1,6 @@
 # Hermes Agent
 
-A **self-hosted AI agent** by [Nous Research](https://nousresearch.com) that runs on your DAppNode. Hermes learns from experience, remembers you across sessions, and connects to Telegram, Discord, Slack, and more — all from a single process.
+A **self-hosted AI agent** by [Nous Research](https://nousresearch.com) that runs on your Dappnode. Hermes learns from experience, remembers you across sessions, and connects to Telegram, Discord, Slack, and more — all from a single process.
 
 ## Getting started
 

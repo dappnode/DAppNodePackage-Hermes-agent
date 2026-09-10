@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repair DAppNode-specific Hermes .env settings before services start."""
+"""Repair Dappnode-specific Hermes .env settings before services start."""
 from __future__ import annotations
 
 import os
@@ -102,7 +102,7 @@ def repair_profile_env(profile_home: Path, *, is_default: bool) -> dict[str, str
         if not has_usable_secret(env.get("API_SERVER_KEY", "")):
             updates["API_SERVER_KEY"] = secrets.token_hex(32)
     else:
-        # DAppNode exposes a single API server on port 3000. Named profile
+        # Dappnode exposes a single API server on port 3000. Named profile
         # gateways can still run messaging/cron, but must not each bind 3000.
         if env.get("API_SERVER_ENABLED", "").strip().lower() not in {"false", "0", "no"}:
             updates["API_SERVER_ENABLED"] = "false"

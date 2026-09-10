@@ -1,9 +1,9 @@
 # DAppNodePackage-Hermes-agent
 
-[![DAppNode](https://img.shields.io/badge/DAppNode-Package-blue)](https://dappnode.io)
+[![Dappnode](https://img.shields.io/badge/DAppNode-Package-blue)](https://dappnode.io)
 [![Upstream](https://img.shields.io/badge/Upstream-NousResearch%2Fhermes--agent-blueviolet)](https://github.com/NousResearch/hermes-agent)
 
-DAppNode package for [Hermes Agent](https://hermes-agent.nousresearch.com/) by [Nous Research](https://nousresearch.com/) — a self-improving AI agent with multi-LLM support, messaging gateway, persistent memory, and skills system.
+Dappnode package for [Hermes Agent](https://hermes-agent.nousresearch.com/) by [Nous Research](https://nousresearch.com/) — a self-improving AI agent with multi-LLM support, messaging gateway, persistent memory, and skills system.
 
 ## Features
 
@@ -16,7 +16,7 @@ DAppNode package for [Hermes Agent](https://hermes-agent.nousresearch.com/) by [
 
 ## Getting Started
 
-1. Install the package from the DAppNode Package Store
+1. Install the package from the Dappnode Package Store
 2. Open the **Setup Wizard** at `http://hermes-agent.dappnode:8080` to configure your AI provider and API key
 3. Open the **Gateway Web UI** at `http://hermes-agent.dappnode:3000` to start chatting
 
@@ -31,9 +31,9 @@ npx @dappnode/dappnodesdk build
 - [Hermes Agent Documentation](https://hermes-agent.nousresearch.com/docs/)
 - [Nous Research](https://nousresearch.com/)
 - [Upstream Repository](https://github.com/NousResearch/hermes-agent)
-- [DAppNode SDK](https://docs.dappnode.io/docs/dev/sdk/overview)
+- [Dappnode SDK](https://docs.dappnode.io/docs/dev/sdk/overview)
 
 ## License
 
-This DAppNode package wrapper is provided under the same license as DAppNode packages (Apache-2.0).
+This Dappnode package wrapper is provided under the same license as Dappnode packages (Apache-2.0).
 Hermes Agent itself is licensed under [MIT](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE).
