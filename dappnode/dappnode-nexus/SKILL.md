@@ -31,8 +31,9 @@ Nexus runs as a service within the Dappnode ecosystem. Users access it via:
 be flipped at any time, not only during setup.
 
 Turned on, prompts go through the **nexus-proxy** package on the same Dappnode,
-which encrypts them so only the TEE (trusted execution environment) running
-Nexus can read them. The proxy verifies that TEE automatically on every
+which keeps them encrypted until they reach Nexus, running in a TEE (trusted
+execution environment). With a model whose id does not start with `private/`,
+Nexus then passes the prompt to that model's provider, which sees it. The proxy verifies that TEE automatically on every
 connection; the user can check the proof at
 `http://nexus-proxy.dappnode.private:3301/verification`.
 
