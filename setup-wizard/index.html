@@ -687,6 +687,18 @@
     /* Explicit disabled colours: dimming gold with opacity turned it olive */
     .nexus-switch input:disabled + .nexus-slider { cursor: not-allowed; background: #2a2e40; }
     .nexus-switch input:disabled + .nexus-slider::before { background: #5b6075; box-shadow: none; }
+    .nexus-confirm {
+      padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--card); color: var(--text);
+      width: min(420px, calc(100vw - 2rem));
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    .nexus-confirm::backdrop { background: rgba(8, 10, 16, 0.65); backdrop-filter: blur(2px); }
+    .nexus-confirm form { padding: 1.25rem 1.35rem 1.1rem; }
+    .nexus-confirm h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+    .nexus-confirm p { margin: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.55; }
+    .nexus-confirm-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+    .nexus-confirm-actions .btn { margin: 0; }
   </style>
 </head>
 
@@ -739,6 +751,16 @@
         <div class="nexus-mode-detail" id="nexus-mode-detail"></div>
         <div class="nexus-mode-msg" id="nexus-mode-msg" hidden></div>
       </div>
+      <dialog class="nexus-confirm" id="nexus-confirm" aria-labelledby="nexus-confirm-title">
+        <form method="dialog">
+          <h3 id="nexus-confirm-title">Turn on private mode?</h3>
+          <p>Hermes needs to restart to apply this. It takes a few seconds, and a reply in progress will stop.</p>
+          <div class="nexus-confirm-actions">
+            <button class="btn btn-secondary" value="cancel">Cancel</button>
+            <button class="btn btn-primary" value="confirm">Restart Hermes</button>
+          </div>
+        </form>
+      </dialog>
 
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
@@ -1086,36 +1108,26 @@
       const toggle = document.getElementById("nexus-mode-toggle");
       _nexusModeBusy = true;
       if (toggle) toggle.disabled = true;
-      const target = enabled ? "private" : "direct";
-      nexusModeMessage("Switching to " + (enabled ? "private" : "direct") + " mode…");
+      nexusModeMessage("Restarting Hermes…");
       try {
         const resp = await fetch("/api/nexus/mode", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: target })
+          body: JSON.stringify({ mode: enabled ? "private" : "direct" })
         });
         const data = await resp.json();
         if (!resp.ok) {
-          // Put the switch back where it was: the change did not happen.
-          if (toggle) toggle.checked = !enabled;
           nexusModeMessage(escapeHtml(data.error || "Could not switch mode"), "err");
           return;
         }
-        // Hermes reads config.yaml at startup, so the switch only takes effect
-        // after a restart. Do it for the user rather than leaving the agent in
-        // a state that disagrees with what the toggle shows.
-        nexusModeMessage("Saved. Restarting Hermes to apply…", "ok");
+        if (toggle) toggle.checked = enabled;
+        // Hermes reads config.yaml at startup, so the new mode applies on restart.
         await fetch("/api/restart", { method: "POST" });
-        nexusModeMessage(
-          "Restarting Hermes — this takes about 5–10 seconds. "
-          + (enabled
-            ? "Your prompts will be encrypted all the way to Nexus once it is back."
-            : "Prompts will go directly to Nexus once it is back."),
-          "ok"
-        );
-        setTimeout(() => { refreshNexusMode(); refreshDashboard(); }, 12000);
+        await waitForHermes();
+        nexusModeMessage(null);
+        refreshNexusMode();
+        refreshDashboard();
       } catch (err) {
-        if (toggle) toggle.checked = !enabled;
         nexusModeMessage(escapeHtml(err.message || "Could not switch mode"), "err");
       } finally {
         _nexusModeBusy = false;
@@ -1123,8 +1135,39 @@
       }
     }
 
-    document.getElementById("nexus-mode-toggle")
-      .addEventListener("change", (e) => setNexusMode(e.target.checked));
+    // The wizard runs in the same container, so it disappears during the restart
+    // too. Poll until the API server answers rather than guessing a delay.
+    async function waitForHermes() {
+      await new Promise((r) => setTimeout(r, 3000));
+      for (let i = 0; i < 40; i++) {
+        try {
+          const r = await fetch("/api/health", { cache: "no-store" });
+          if (r.ok && (await r.json()).apiServer) return;
+        } catch { /* still restarting */ }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+
+    // Switching restarts Hermes, which cuts off a reply in progress, so ask first.
+    // The switch snaps back until the user confirms.
+    const nexusConfirm = document.getElementById("nexus-confirm");
+    let _nexusPending = null;
+    document.getElementById("nexus-mode-toggle").addEventListener("change", (e) => {
+      const wanted = e.target.checked;
+      e.target.checked = !wanted;
+      _nexusPending = wanted;
+      document.getElementById("nexus-confirm-title").textContent =
+        wanted ? "Turn on private mode?" : "Turn off private mode?";
+      nexusConfirm.returnValue = "";
+      nexusConfirm.showModal();
+    });
+    // A click on the backdrop lands on the dialog itself (the form fills the box).
+    nexusConfirm.addEventListener("click", (e) => { if (e.target === nexusConfirm) nexusConfirm.close("cancel"); });
+    nexusConfirm.addEventListener("close", () => {
+      const wanted = _nexusPending;
+      _nexusPending = null;
+      if (nexusConfirm.returnValue === "confirm" && wanted !== null) setNexusMode(wanted);
+    });
 
     refreshNexusMode();
 
