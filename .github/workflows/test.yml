@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "README.md"
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "README.md"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python dependencies
+        run: pip install pyyaml
+      - name: Run Node.js Tests
+        run: npm run test:node
+      - name: Run Python Tests
+        run: npm run test:python

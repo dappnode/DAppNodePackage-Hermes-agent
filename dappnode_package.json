@@ -18,7 +18,7 @@
     "Developer tools",
     "Communications"
   ],
-  "description": "Hermes Agent is a self-improving AI agent built by Nous Research. It features a built-in learning loop — creating skills from experience, improving them during use, and building a deepening model of who you are across sessions.\n\n- **Web Gateway**: Full-featured web interface for interacting with AI\n- **Multi-LLM Support**: OpenRouter, OpenAI, Anthropic, Google Gemini, Ollama, Groq, and more\n- **Messaging Gateway**: Telegram, Discord, Slack, WhatsApp, Signal — all from a single process\n- **Skills System**: Agent-curated procedural memory that self-improves\n- **Persistent Memory**: Cross-session recall with user modeling\n- **Cron Scheduling**: Automated tasks with delivery to any platform\n- **Subagent Delegation**: Spawn isolated subagents for parallel workstreams\n\nRun your own AI agent with full control over your data and API keys.",
+  "description": "Hermes Agent is a self-improving AI agent built by Nous Research. It features a built-in learning loop — creating skills from experience, improving them during use, and building a deepening model of who you are across sessions.\n\n- **Web Gateway**: Full-featured web interface for interacting with AI\n- **Multi-LLM Support**: OpenRouter, OpenAI, Anthropic, Google Gemini, Ollama, Groq, Mistral, and more\n- **Messaging Gateway**: Telegram, Discord, Slack, WhatsApp, Signal — all from a single process\n- **Skills System**: Agent-curated procedural memory that self-improves\n- **Persistent Memory**: Cross-session recall with user modeling\n- **Cron Scheduling**: Automated tasks with delivery to any platform\n- **Subagent Delegation**: Spawn isolated subagents for parallel workstreams\n\nRun your own AI agent with full control over your data and API keys.",
   "exposable": [
     {
       "description": "OpenAI-compatible API for programmatic access to Hermes AI agent",
@@ -30,6 +30,12 @@
       "description": "Web-based setup wizard for easy configuration",
       "name": "Hermes Agent Setup Wizard",
       "port": 8080,
+      "serviceName": "hermes-agent"
+    },
+    {
+      "description": "Direct access to Hermes Agent Web Dashboard (password protected)",
+      "name": "Hermes Agent Dashboard",
+      "port": 8081,
       "serviceName": "hermes-agent"
     },
     {
@@ -53,6 +59,7 @@
     "telegram",
     "discord",
     "whatsapp",
+    "slack",
     "skills"
   ],
   "license": "MIT",

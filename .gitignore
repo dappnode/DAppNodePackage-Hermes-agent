@@ -12,6 +12,12 @@ build_*/
 # Node
 node_modules/
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
 # OS files
 .DS_Store
 Thumbs.db

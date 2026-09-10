@@ -111,7 +111,7 @@
     }
 
     .page {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 2rem 1rem;
     }
@@ -158,6 +158,36 @@
 
     .status-card .value.warn {
       color: var(--warning);
+    }
+
+    .diagnostics-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .diagnostics-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .diagnostics-output {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: var(--text);
+      display: none;
     }
 
     .quick-links {
@@ -297,7 +327,7 @@
       background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 215, 0, 0.02));
       border-color: var(--primary);
       position: relative;
-      padding: 1.25rem 1.25rem 1.25rem 1.25rem;
+      padding: 1.25rem;
     }
 
     .card.featured:hover {
@@ -377,6 +407,22 @@
       color: var(--text-muted);
       font-weight: 400;
       margin-left: 6px;
+    }
+
+    .integration-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .integration-section h3 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .model-input-wrap {
@@ -641,6 +687,21 @@
           <div class="value" id="st-model">—</div>
         </div>
       </div>
+
+      <!-- Live Diagnostics / Doctor widget -->
+      <div class="diagnostics-panel">
+        <div class="diagnostics-header">
+          <div>
+            <strong style="font-size: 0.95rem;">System Diagnostics</strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Run Hermes doctor to verify AI providers, database, and skills</div>
+          </div>
+          <button class="probe-btn" id="doctor-btn" onclick="runDoctorCheck()" style="margin-bottom:0">
+            <span>&#129658;</span> Run Doctor
+          </button>
+        </div>
+        <pre class="diagnostics-output" id="doctor-output"></pre>
+      </div>
+
       <h3 style="margin-bottom:0.75rem">Quick Links</h3>
       <div class="quick-links">
         <a href="#" onclick="event.preventDefault(); switchTab('setup')">
@@ -699,50 +760,95 @@
 
       <!-- Step 2: Messaging + Integrations -->
       <div class="step" data-step="2">
-        <h2>Integrations</h2>
-        <div class="subtitle">Optional — skip any you don't need.</div>
-        <div class="field">
-          <label>Dashboard Username</label>
-          <div class="hint">Used for the Hermes Dashboard login.</div>
-          <input type="text" id="dashboard-username" value="dappnode" autocomplete="username" placeholder="dappnode">
-        </div>
-        <div class="field">
-          <label>Dashboard Password</label>
-          <div class="hint">Leave blank to keep the current dashboard password.</div>
-          <input type="password" id="dashboard-password" autocomplete="new-password" placeholder="Set a dashboard password">
-        </div>
-        <div class="field">
-          <label>Telegram Bot Token <span class="optional-badge">optional</span></label>
-          <div class="hint">From <strong>@BotFather</strong> on Telegram.</div>
-          <input type="text" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNO...">
-        </div>
-        <div class="field" id="telegram-users-field" style="display:none">
-          <label>Allowed Telegram User IDs <span class="optional-badge">optional</span></label>
-          <div class="hint">Comma-separated. Use <strong>@userinfobot</strong> to find yours.</div>
-          <input type="text" id="telegram-users" placeholder="123456789,987654321">
-        </div>
-        <div class="field">
-          <label>WhatsApp <span class="optional-badge">optional</span></label>
-          <div class="hint">Connects via the built-in Baileys bridge.</div>
-          <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
-            <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
-            Configure WhatsApp pairing
-          </label>
-          <div id="whatsapp-pair-notice"
-            style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
-            <strong style="color:var(--primary);">→ Pairing required</strong><br>
-            After the Setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to choose a
-            mode and pair via QR code. Hermes enables WhatsApp only after pairing succeeds. You will need to manually
-            restart the package after pairing to apply the changes.
-            <br><br>
+        <h2>Integrations &amp; Security</h2>
+        <div class="subtitle">Configure messaging channels and dashboard access (all optional).</div>
+
+        <!-- Dashboard Auth -->
+        <div class="integration-section">
+          <h3>&#128274; Dashboard Authentication</h3>
+          <div class="field">
+            <label>Dashboard Username</label>
+            <div class="hint">Used for the Hermes Dashboard login.</div>
+            <input type="text" id="dashboard-username" value="dappnode" autocomplete="username" placeholder="dappnode">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Dashboard Password</label>
+            <div class="hint">Leave blank to keep the current dashboard password.</div>
+            <input type="password" id="dashboard-password" autocomplete="new-password" placeholder="Set a dashboard password">
           </div>
         </div>
-        <div class="field" id="whatsapp-users-field" style="display:none">
-          <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
-          <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to
-            allow anyone (not recommended).</div>
-          <input type="text" id="whatsapp-users" placeholder="15551234567,447700900123">
+
+        <!-- Telegram -->
+        <div class="integration-section">
+          <h3>&#128172; Telegram</h3>
+          <div class="field">
+            <label>Telegram Bot Token <span class="optional-badge">optional</span></label>
+            <div class="hint">From <strong>@BotFather</strong> on Telegram.</div>
+            <input type="text" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNO...">
+          </div>
+          <div class="field" id="telegram-users-field" style="display:none; margin-bottom:0">
+            <label>Allowed Telegram User IDs <span class="optional-badge">optional</span></label>
+            <div class="hint">Comma-separated. Use <strong>@userinfobot</strong> to find yours.</div>
+            <input type="text" id="telegram-users" placeholder="123456789,987654321">
+          </div>
         </div>
+
+        <!-- WhatsApp -->
+        <div class="integration-section">
+          <h3>&#128222; WhatsApp</h3>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:6px;">
+              <input type="checkbox" id="whatsapp-enabled" style="width:auto;">
+              Configure WhatsApp pairing
+            </label>
+            <div id="whatsapp-pair-notice"
+              style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,215,0,0.12); border:1px solid var(--primary); border-radius:8px; font-size:0.85rem; line-height:1.5;">
+              <strong style="color:var(--primary);">→ Pairing required</strong><br>
+              After saving setup, open the <strong>Terminal</strong> tab and run <code>hermes whatsapp</code> to pair via QR code.
+            </div>
+          </div>
+          <div class="field" id="whatsapp-users-field" style="display:none; margin-bottom:0">
+            <label>Allowed WhatsApp Phone Numbers <span class="optional-badge">optional</span></label>
+            <div class="hint">Comma-separated, with country code (e.g. <code>15551234567</code>). Use <code>*</code> to allow anyone.</div>
+            <input type="text" id="whatsapp-users" placeholder="15551234567,447700900123">
+          </div>
+        </div>
+
+        <!-- Discord -->
+        <div class="integration-section">
+          <h3>&#127918; Discord <span class="optional-badge">optional</span></h3>
+          <div class="field">
+            <label>Discord Bot Token</label>
+            <div class="hint">From Discord Developer Portal.</div>
+            <input type="password" id="discord-token" placeholder="Bot token...">
+          </div>
+          <div class="field">
+            <label>Allowed Discord User IDs</label>
+            <div class="hint">Comma-separated Discord user IDs.</div>
+            <input type="text" id="discord-users" placeholder="123456789012345678">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Allowed Discord Channels</label>
+            <div class="hint">Comma-separated Discord channel IDs.</div>
+            <input type="text" id="discord-channels" placeholder="123456789012345678">
+          </div>
+        </div>
+
+        <!-- Slack -->
+        <div class="integration-section">
+          <h3>&#128188; Slack <span class="optional-badge">optional</span></h3>
+          <div class="field">
+            <label>Slack Bot Token (xoxb-...)</label>
+            <div class="hint">From Slack API app settings.</div>
+            <input type="password" id="slack-bot-token" placeholder="xoxb-...">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Slack App Token (xapp-...)</label>
+            <div class="hint">Socket Mode app token.</div>
+            <input type="password" id="slack-app-token" placeholder="xapp-...">
+          </div>
+        </div>
+
         <div class="actions">
           <button class="btn btn-secondary" onclick="goTo(1)">Back</button>
           <button class="btn btn-primary" onclick="showReview()">Review</button>
@@ -752,11 +858,10 @@
       <!-- Step 3: Review & Save -->
       <div class="step" data-step="3">
         <h2>Review &amp; Save</h2>
-        <div class="subtitle">You can also edit these files from the Terminal tab, or re-run this wizard at any time.
-        </div>
-        <h3 style="margin-bottom:0.5rem;font-size:1rem;">.env changes</h3>
+        <div class="subtitle">You can also edit these files from the Terminal tab, or re-run this wizard at any time.</div>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem;">.env preview</h3>
         <div class="config-preview" id="env-preview" style="margin-bottom:1rem;"></div>
-        <h3 style="margin-bottom:0.5rem;font-size:1rem;">config.yaml changes</h3>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem;">config.yaml preview</h3>
         <div class="config-preview" id="config-preview"></div>
         <div class="actions">
           <button class="btn btn-secondary" onclick="goTo(2)">Back</button>
@@ -771,8 +876,7 @@
         <div class="quick-links">
           <a href="#" onclick="event.preventDefault(); switchTab('terminal')">
             Open Terminal
-            <small>Run <code>hermes doctor</code> to verify configuration or <code>hermes model</code> to change
-              models</small>
+            <small>Run <code>hermes doctor</code> to verify configuration or <code>hermes model</code> to change models</small>
           </a>
           <a href="http://hermes-agent.dappnode:3000/health" target="_blank">
             Check API Health
@@ -815,7 +919,6 @@
       document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
       const el = document.getElementById("tc-" + name);
       if (el) el.classList.add("active");
-      // Lazy-load terminal iframe
       if (name === "terminal") {
         const frame = document.getElementById("terminal-frame");
         if (frame.src === "about:blank" || !frame.src.includes("7681")) {
@@ -825,13 +928,12 @@
       if (name === "dashboard") {
         refreshDashboard();
       } else {
-        // Stop polling when leaving dashboard
         if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
       }
     }
 
     // =========================================================================
-    // Dashboard
+    // Dashboard & Diagnostics
     // =========================================================================
     let _dashboardPollTimer = null;
 
@@ -849,6 +951,29 @@
       if (usernameEl && !dashboardUsernameTouched) {
         usernameEl.value = existingDashboardUsername;
       }
+      if (existingEnv.TELEGRAM_BOT_TOKEN) {
+        const tg = document.getElementById("telegram-token");
+        if (tg && !tg.value) tg.value = existingEnv.TELEGRAM_BOT_TOKEN;
+        const tgUsers = document.getElementById("telegram-users");
+        if (tgUsers && existingEnv.TELEGRAM_ALLOWED_USERS && !tgUsers.value) {
+          tgUsers.value = existingEnv.TELEGRAM_ALLOWED_USERS;
+          document.getElementById("telegram-users-field").style.display = "block";
+        }
+      }
+      if (existingEnv.DISCORD_BOT_TOKEN) {
+        const dToken = document.getElementById("discord-token");
+        if (dToken && !dToken.value) dToken.value = existingEnv.DISCORD_BOT_TOKEN;
+        const dUsers = document.getElementById("discord-users");
+        if (dUsers && existingEnv.DISCORD_ALLOWED_USERS && !dUsers.value) dUsers.value = existingEnv.DISCORD_ALLOWED_USERS;
+        const dChan = document.getElementById("discord-channels");
+        if (dChan && existingEnv.DISCORD_ALLOWED_CHANNELS && !dChan.value) dChan.value = existingEnv.DISCORD_ALLOWED_CHANNELS;
+      }
+      if (existingEnv.SLACK_BOT_TOKEN) {
+        const sBot = document.getElementById("slack-bot-token");
+        if (sBot && !sBot.value) sBot.value = existingEnv.SLACK_BOT_TOKEN;
+        const sApp = document.getElementById("slack-app-token");
+        if (sApp && existingEnv.SLACK_APP_TOKEN && !sApp.value) sApp.value = existingEnv.SLACK_APP_TOKEN;
+      }
     }
 
     async function refreshDashboard() {
@@ -857,18 +982,15 @@
         const data = await resp.json();
         const apiEl = document.getElementById("st-api");
         const healthEl = document.getElementById("st-health");
-        // Hermes returns status:"connected" (not "ok") when fully up
         const healthy = data.status === "ok" || data.status === "connected";
         if (data.apiServer) {
           apiEl.textContent = "Running"; apiEl.className = "value ok";
           healthEl.textContent = healthy ? "Healthy" : "Degraded";
           healthEl.className = "value " + (healthy ? "ok" : "warn");
-          // API is up — stop polling
           if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
         } else {
           apiEl.textContent = "Starting…"; apiEl.className = "value warn";
           healthEl.textContent = "—"; healthEl.className = "value";
-          // API not yet up — start polling every 8s until it is
           if (!_dashboardPollTimer) {
             _dashboardPollTimer = setInterval(refreshDashboard, 8000);
           }
@@ -891,23 +1013,44 @@
     }
     refreshDashboard();
 
+    async function runDoctorCheck() {
+      const btn = document.getElementById("doctor-btn");
+      const out = document.getElementById("doctor-output");
+      btn.disabled = true;
+      btn.innerHTML = "<span>&#9203;</span> Running...";
+      out.style.display = "block";
+      out.textContent = "Running hermes doctor diagnostics...";
+
+      try {
+        const resp = await fetch("/api/doctor");
+        const data = await resp.json();
+        out.textContent = data.output || (data.ok ? "Doctor checks completed successfully." : "No diagnostics output available.");
+      } catch (err) {
+        out.textContent = "Error running doctor check: " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "<span>&#129658;</span> Run Doctor";
+      }
+    }
+
     // =========================================================================
     // Provider definitions
     // =========================================================================
     const PROVIDERS = [
       { id: "nexus", name: "DAppNode Nexus", desc: "Private AI models — your prompts are never logged or stored", tag: "Recommended", free: false, envKey: "NEXUS_API_KEY", provider: "custom" },
       { id: "openrouter", name: "OpenRouter", desc: "Access 200+ models with one key", tag: "Flexible", free: false, envKey: "OPENROUTER_API_KEY", provider: "openrouter" },
-      { id: "openai", name: "OpenAI", desc: "GPT-5.x, GPT-4.1, o4-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
-      { id: "anthropic", name: "Anthropic", desc: "Claude Opus, Sonnet, Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
-      { id: "google", name: "Google Gemini", desc: "Gemini 3 Pro, 2.5 Pro & Flash", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
-      { id: "ollama", name: "Ollama (Local)", desc: "Run models on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
-      { id: "deepseek", name: "DeepSeek", desc: "V3.2, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
+      { id: "openai", name: "OpenAI", desc: "GPT-4o, GPT-4.5, o1 & o3-mini", tag: "Most popular", free: false, envKey: "OPENAI_API_KEY", provider: "openai" },
+      { id: "anthropic", name: "Anthropic", desc: "Claude 3.7 Sonnet, Opus & Haiku", tag: "Strong reasoning", free: false, envKey: "ANTHROPIC_API_KEY", provider: "anthropic" },
+      { id: "google", name: "Google Gemini", desc: "Gemini 2.0 Flash & Pro, 1.5 Pro", tag: "Multimodal", free: false, envKey: "GOOGLE_API_KEY", provider: "google" },
+      { id: "groq", name: "Groq", desc: "Ultra-fast inference with free tier available", tag: "Fast", free: true, envKey: "GROQ_API_KEY", provider: "groq" },
+      { id: "mistral", name: "Mistral AI", desc: "Mistral Large, Pixtral & Codestral", tag: "Frontier", free: false, envKey: "MISTRAL_API_KEY", provider: "mistral" },
+      { id: "ollama", name: "Ollama (Local)", desc: "Run models locally on your DAppNode", tag: "Free", free: true, envKey: null, provider: "custom" },
+      { id: "deepseek", name: "DeepSeek", desc: "DeepSeek-V3, R1 reasoning", tag: "Budget", free: false, envKey: "DEEPSEEK_API_KEY", provider: "deepseek" },
       { id: "huggingface", name: "Hugging Face", desc: "20+ open models via unified router", tag: "Free tier", free: true, envKey: "HF_TOKEN", provider: "huggingface" },
-      { id: "copilot", name: "GitHub Copilot", desc: "GPT-5, Claude, Gemini via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
+      { id: "copilot", name: "GitHub Copilot", desc: "GPT-4o, Claude 3.5, o1 via Copilot", tag: "Subscription", free: false, envKey: "COPILOT_GITHUB_TOKEN", provider: "copilot" },
       { id: "custom", name: "Custom Endpoint", desc: "Any OpenAI or Anthropic-compatible API", tag: "Advanced", free: false, envKey: null, provider: "custom" },
     ];
 
-    // Suggested models per provider (shown as autocomplete hints — user can type anything)
     const SUGGESTED_MODELS = {
       nexus: [
         { id: "deepseek/deepseek-v4-pro", name: "DeepSeek V4 Pro", context_length: 1048576 },
@@ -917,13 +1060,14 @@
         { id: "minimax/minimax-m2.7", name: "MiniMax M2.7", context_length: 204800 },
         { id: "nexus/auto", name: "Auto Router", context_length: 1000000 },
       ],
-      openai: ["gpt-4.1", "gpt-4.1-mini", "gpt-5.2", "o4-mini", "o3", "gpt-4o"],
-      anthropic: ["claude-sonnet-4-5-20250929", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
-      google: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
-      groq: ["llama-3.3-70b-versatile", "meta-llama/llama-4-scout-17b-16e-instruct", "qwen/qwen3-32b"],
+      openai: ["gpt-4o", "gpt-4o-mini", "o1", "o3-mini", "gpt-4.5-preview", "gpt-4-turbo"],
+      anthropic: ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"],
+      google: ["gemini-2.0-flash", "gemini-2.0-pro-exp-02-05", "gemini-1.5-pro", "gemini-1.5-flash"],
+      groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
+      mistral: ["mistral-large-latest", "pixtral-large-latest", "codestral-latest", "ministral-8b-latest"],
       deepseek: ["deepseek-chat", "deepseek-reasoner"],
-      huggingface: ["Qwen/Qwen3-235B-A22B-Thinking-2507", "deepseek-ai/DeepSeek-V3.2"],
-      copilot: ["gpt-5.4", "claude-sonnet-4", "gpt-4o"],
+      huggingface: ["Qwen/Qwen2.5-72B-Instruct", "deepseek-ai/DeepSeek-V3", "meta-llama/Llama-3.3-70B-Instruct"],
+      copilot: ["gpt-4o", "claude-3.5-sonnet", "o1"],
     };
 
     let currentStep = 0;
@@ -943,7 +1087,7 @@
       const featured = p.id === "nexus";
       card.className = "card" + (featured ? " featured" : "");
       card.dataset.id = p.id;
-      const tagHtml = featured ? `<span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>` : "";
+      const tagHtml = `<span class="card-tag ${p.free ? 'free' : ''}">${p.tag}</span>`;
       card.innerHTML = `<div class="card-title">${p.name}</div><div class="card-desc">${p.desc}</div>${tagHtml}`;
       card.onclick = () => selectProviderCard(p.id);
       cardsEl.appendChild(card);
@@ -982,7 +1126,6 @@
         else if (i === step) bar.classList.add("active");
       });
       if (step === 1 && selectedProvider) renderProviderConfig();
-      // Reset save button if returning to review step
       if (step === 3) {
         const btn = document.getElementById("btn-save");
         if (btn) { btn.disabled = false; btn.textContent = "Save Configuration"; }
@@ -1120,13 +1263,12 @@
           <div class="field">
             <label>Model Name</label>
             <div class="hint">Type the model identifier your endpoint expects.</div>
-            <input type="text" id="custom-model-name" placeholder="gpt-4, claude-3-opus, llama3, ...">
+            <input type="text" id="custom-model-name" placeholder="gpt-4o, claude-3-5-sonnet, llama3, ...">
           </div>
         `;
         return;
       }
 
-      // OpenRouter — fetch models dynamically
       if (p.id === "openrouter") {
         container.innerHTML = `
           <h2>Configure OpenRouter</h2>
@@ -1146,12 +1288,12 @@
         return;
       }
 
-      // Standard provider with API key + suggested models
       const keyMap = {
         openai: ["OpenAI API Key", "Get one at platform.openai.com/api-keys"],
         anthropic: ["Anthropic API Key", "Get one at console.anthropic.com"],
         google: ["Google AI API Key", "Get one at aistudio.google.com/app/apikey"],
         groq: ["Groq API Key", "Get one at console.groq.com (free tier available)"],
+        mistral: ["Mistral API Key", "Get one at console.mistral.ai"],
         deepseek: ["DeepSeek API Key", "Get one at platform.deepseek.com"],
         huggingface: ["Hugging Face Token", "Get one at huggingface.co/settings/tokens (enable Inference Providers permission)"],
         copilot: ["GitHub Token", "Use a fine-grained PAT with Copilot Requests permission, or run 'hermes model' in the Terminal tab for OAuth login"],
@@ -1189,16 +1331,16 @@
       if (!mc) return;
       mc.innerHTML = "";
       const suggestions = openRouterModels.length ? openRouterModels : [
-        { id: "anthropic/claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
-        { id: "openai/gpt-5.2", name: "GPT-5.2" },
-        { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-        { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1" },
+        { id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet" },
+        { id: "openai/gpt-4o", name: "GPT-4o" },
+        { id: "google/gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+        { id: "deepseek/deepseek-r1", name: "DeepSeek R1" },
       ];
       mc.appendChild(createModelInput("or-model", suggestions,
-        openRouterModels.length ? `Search ${openRouterModels.length} models...` : "Type a model ID (e.g. anthropic/claude-sonnet-4-5)"));
+        openRouterModels.length ? `Search ${openRouterModels.length} models...` : "Type a model ID (e.g. anthropic/claude-3.7-sonnet)"));
       const inp = document.getElementById("or-model-input");
       if (inp && openRouterModels.length) {
-        const claude = openRouterModels.find(m => m.id.includes("claude-sonnet"));
+        const claude = openRouterModels.find(m => m.id.includes("claude-3.7-sonnet") || m.id.includes("claude-3-7-sonnet") || m.id.includes("claude-sonnet"));
         inp.value = claude ? claude.id : openRouterModels[0].id;
       }
     }
@@ -1219,7 +1361,6 @@
         nexusModels.length ? `Search ${nexusModels.length} models...` : "e.g. deepseek/deepseek-v4-pro"));
       const inp = document.getElementById("nexus-model-input");
       if (inp && suggestions.length) {
-        // Pre-select DeepSeek V4 Pro if available, otherwise first model
         const ds = suggestions.find(m => m.id === "deepseek/deepseek-v4-pro");
         inp.value = ds ? ds.id : suggestions[0].id;
       }
@@ -1388,6 +1529,7 @@
           env.LLM_MODEL = p.id === "openrouter" ? model : p.id + "/" + model;
         }
       }
+
       const tgToken = (document.getElementById("telegram-token").value || "").trim();
       if (tgToken) {
         env.TELEGRAM_BOT_TOKEN = tgToken;
@@ -1398,6 +1540,21 @@
         const waUsers = (document.getElementById("whatsapp-users").value || "").trim();
         if (waUsers) env.WHATSAPP_ALLOWED_USERS = waUsers;
       }
+      const discordToken = (document.getElementById("discord-token").value || "").trim();
+      if (discordToken) {
+        env.DISCORD_BOT_TOKEN = discordToken;
+        const dUsers = (document.getElementById("discord-users").value || "").trim();
+        if (dUsers) env.DISCORD_ALLOWED_USERS = dUsers;
+        const dChannels = (document.getElementById("discord-channels").value || "").trim();
+        if (dChannels) env.DISCORD_ALLOWED_CHANNELS = dChannels;
+      }
+      const slackBot = (document.getElementById("slack-bot-token").value || "").trim();
+      if (slackBot) {
+        env.SLACK_BOT_TOKEN = slackBot;
+        const slackApp = (document.getElementById("slack-app-token").value || "").trim();
+        if (slackApp) env.SLACK_APP_TOKEN = slackApp;
+      }
+
       Object.assign(env, buildDashboardAuthEnv());
       return env;
     }
@@ -1414,17 +1571,8 @@
         lines.push(`  default: "${model}"`);
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "https://nexus-api.dappnode.com/v1"`);
-        // Hermes reads the key for a custom endpoint from model.api_key in
-        // config.yaml (the documented source of truth). The NEXUS_API_KEY /
-        // OPENAI_API_KEY env vars are not a reliable path: NEXUS_API_KEY is
-        // never read, and the legacy OPENAI_* vars get cleared by config
-        // migration on boot. So write the key here.
         const nexusKey = (document.getElementById("api-key").value || "").trim();
         if (nexusKey) lines.push(`  api_key: "${nexusKey}"`);
-        // Set context_length from the live Nexus /v1/models data (falls back to
-        // the static suggestions). If the model isn't in either list we omit it
-        // and let the boot-time patch-config.py fetch the authoritative
-        // context_size from /v1/models, rather than guessing a number.
         const allNexusSuggestions = nexusModels.length ? nexusModels : (SUGGESTED_MODELS.nexus || []);
         const matched = allNexusSuggestions.find(m => m.id === model);
         if (matched && matched.context_length) {
@@ -1435,6 +1583,7 @@
         lines.push(`  default: "${getModelValue() || "llama3"}"`);
         lines.push(`  provider: "custom"`);
         lines.push(`  base_url: "${url}"`);
+        lines.push(`  api_key: "ollama-local"`);
       } else if (p.id === "custom") {
         const spec = document.getElementById("custom-spec").value;
         const baseUrl = (document.getElementById("custom-base-url").value || "").trim();
@@ -1443,13 +1592,10 @@
           lines.push(`  default: "anthropic/${model || "claude-3-opus-20240229"}"`);
           lines.push(`  provider: "anthropic"`);
         } else {
-          lines.push(`  default: "${model || "gpt-4"}"`);
+          lines.push(`  default: "${model || "gpt-4o"}"`);
           lines.push(`  provider: "custom"`);
         }
         if (baseUrl) lines.push(`  base_url: "${baseUrl}"`);
-        // For an OpenAI-compatible custom endpoint, write the key into
-        // config.yaml (Anthropic custom uses ANTHROPIC_API_KEY in .env, which
-        // Hermes reads natively).
         if (spec !== "anthropic") {
           const customKey = (document.getElementById("custom-api-key").value || "").trim();
           if (customKey) lines.push(`  api_key: "${customKey}"`);
@@ -1484,8 +1630,6 @@
         } else { envLines.push(`${k}=${v}`); }
       }
       document.getElementById("env-preview").textContent = envLines.join("\n") || "(no changes)";
-      // Mask any inline api_key so the secret isn't shown in plaintext (the
-      // unmasked yaml from buildConfigYaml() is still what gets saved).
       const safeYaml = yaml.replace(/(\bapi_key:\s*")([^"]*)(")/g,
         (m, a, v, c) => a + v.slice(0, 4) + "*".repeat(Math.max(0, v.length - 4)) + c);
       document.getElementById("config-preview").textContent = safeYaml;
@@ -1501,7 +1645,13 @@
         btn.disabled = false; btn.textContent = "Save Configuration";
         return;
       }
-      const needsRestart = !!(env.TELEGRAM_BOT_TOKEN || env.WHATSAPP_ENABLED || dashboardAuthChanged());
+      const needsRestart = !!(
+        env.TELEGRAM_BOT_TOKEN ||
+        env.WHATSAPP_ENABLED ||
+        env.DISCORD_BOT_TOKEN ||
+        env.SLACK_BOT_TOKEN ||
+        dashboardAuthChanged()
+      );
       try {
         const resp = await fetch("/api/config", {
           method: "POST",
