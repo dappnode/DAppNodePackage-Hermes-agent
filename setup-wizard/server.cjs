@@ -19,7 +19,7 @@ const DASHBOARD_PUBLIC_URL = process.env.DAPPNODE_DASHBOARD_URL
 const NEXUS_AUTHGEAR_ENDPOINT = (process.env.NEXUS_AUTHGEAR_ENDPOINT || "https://nexus-auth.dappnode.com").replace(/\/+$/, "");
 const NEXUS_AUTHGEAR_CLIENT_ID = process.env.NEXUS_AUTHGEAR_CLIENT_ID || "986265c5bcad52f7";
 const NEXUS_CONTROL_PLANE_URL = (process.env.NEXUS_CONTROL_PLANE_URL || "https://nexus-cp.dappnode.com").replace(/\/+$/, "");
-const NEXUS_API_KEY_NAME = process.env.NEXUS_API_KEY_NAME || "EVMcrispr Chat";
+const NEXUS_API_KEY_NAME = process.env.NEXUS_API_KEY_NAME || "Hermes Agent";
 const NEXUS_AUTH_RESULT_TTL = 10 * 60 * 1000;
 
 const OLLAMA_CANDIDATES = [
@@ -140,7 +140,7 @@ async function createNexusApiKey(accessToken) {
     },
     body: JSON.stringify({
       name: NEXUS_API_KEY_NAME,
-      pii_mode: "balanced",
+      pii_mode: "none",
     }),
     signal: AbortSignal.timeout(15000),
   });
