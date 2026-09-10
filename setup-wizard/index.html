@@ -883,6 +883,73 @@
       }
       if (name === "dashboard") {
         refreshDashboard();
+        refreshNexusMode();
+      } else {
+        // Stop polling when leaving dashboard
+        if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
+      }
+    }
+
+    // =========================================================================
+    // Dashboard
+    // =========================================================================
+    let _dashboardPollTimer = null;
+
+    function dashboardUsernameFromConfig(raw, env) {
+      const fromEnv = (env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "").trim();
+      if (fromEnv) return fromEnv;
+      const match = String(raw || "").match(/basic_auth:\s*[\s\S]*?username:\s*["']?([^"'\n]+)/);
+      return match ? match[1].trim() : "dappnode";
+    }
+
+    function hydrateDashboardAuthFields(raw, env) {
+      existingEnv = env || {};
+      existingDashboardUsername = dashboardUsernameFromConfig(raw, existingEnv);
+      const usernameEl = document.getElementById("dashboard-username");
+      if (usernameEl && !dashboardUsernameTouched) {
+        usernameEl.value = existingDashboardUsername;
+      }
+    }
+
+    async function refreshDashboard() {
+      try {
+        const resp = await fetch("/api/health");
+        const data = await resp.json();
+        const apiEl = document.getElementById("st-api");
+        const healthEl = document.getElementById("st-health");
+        // Hermes returns status:"connected" (not "ok") when fully up
+        const healthy = data.status === "ok" || data.status === "connected";
+        if (data.apiServer) {
+          apiEl.textContent = "Running"; apiEl.className = "value ok";
+          healthEl.textContent = healthy ? "Healthy" : "Degraded";
+          healthEl.className = "value " + (healthy ? "ok" : "warn");
+          // API is up — stop polling
+          if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
+        } else {
+          apiEl.textContent = "Starting…"; apiEl.className = "value warn";
+          healthEl.textContent = "—"; healthEl.className = "value";
+          // API not yet up — start polling every 8s until it is
+          if (!_dashboardPollTimer) {
+            _dashboardPollTimer = setInterval(refreshDashboard, 8000);
+          }
+        }
+      } catch {
+        document.getElementById("st-api").textContent = "Not reachable";
+        document.getElementById("st-api").className = "value err";
+      }
+      try {
+        const resp = await fetch("/api/config");
+        const data = await resp.json();
+        const env = data.env || {};
+        const raw = data.config || "";
+        hydrateDashboardAuthFields(raw, env);
+        const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
+        const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
+        document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
+        document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
+      } catch { }
+    }
+    refreshDashboard();
 
     // =========================================================================
     // Nexus privacy mode (runtime switch)
@@ -1015,72 +1082,6 @@
       .addEventListener("change", (e) => setNexusMode(e.target.checked));
 
     refreshNexusMode();
-      } else {
-        // Stop polling when leaving dashboard
-        if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
-      }
-    }
-
-    // =========================================================================
-    // Dashboard
-    // =========================================================================
-    let _dashboardPollTimer = null;
-
-    function dashboardUsernameFromConfig(raw, env) {
-      const fromEnv = (env.HERMES_DASHBOARD_BASIC_AUTH_USERNAME || "").trim();
-      if (fromEnv) return fromEnv;
-      const match = String(raw || "").match(/basic_auth:\s*[\s\S]*?username:\s*["']?([^"'\n]+)/);
-      return match ? match[1].trim() : "dappnode";
-    }
-
-    function hydrateDashboardAuthFields(raw, env) {
-      existingEnv = env || {};
-      existingDashboardUsername = dashboardUsernameFromConfig(raw, existingEnv);
-      const usernameEl = document.getElementById("dashboard-username");
-      if (usernameEl && !dashboardUsernameTouched) {
-        usernameEl.value = existingDashboardUsername;
-      }
-    }
-
-    async function refreshDashboard() {
-      try {
-        const resp = await fetch("/api/health");
-        const data = await resp.json();
-        const apiEl = document.getElementById("st-api");
-        const healthEl = document.getElementById("st-health");
-        // Hermes returns status:"connected" (not "ok") when fully up
-        const healthy = data.status === "ok" || data.status === "connected";
-        if (data.apiServer) {
-          apiEl.textContent = "Running"; apiEl.className = "value ok";
-          healthEl.textContent = healthy ? "Healthy" : "Degraded";
-          healthEl.className = "value " + (healthy ? "ok" : "warn");
-          // API is up — stop polling
-          if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
-        } else {
-          apiEl.textContent = "Starting…"; apiEl.className = "value warn";
-          healthEl.textContent = "—"; healthEl.className = "value";
-          // API not yet up — start polling every 8s until it is
-          if (!_dashboardPollTimer) {
-            _dashboardPollTimer = setInterval(refreshDashboard, 8000);
-          }
-        }
-      } catch {
-        document.getElementById("st-api").textContent = "Not reachable";
-        document.getElementById("st-api").className = "value err";
-      }
-      try {
-        const resp = await fetch("/api/config");
-        const data = await resp.json();
-        const env = data.env || {};
-        const raw = data.config || "";
-        hydrateDashboardAuthFields(raw, env);
-        const provMatch = raw.match(/provider:\s*["']?([^"'\n]+)/);
-        const modelMatch = raw.match(/default:\s*["']?([^"'\n]+)/);
-        document.getElementById("st-provider").textContent = provMatch ? provMatch[1].trim() : (env.LLM_MODEL ? "custom" : "—");
-        document.getElementById("st-model").textContent = modelMatch ? modelMatch[1].trim() : (env.LLM_MODEL || "—");
-      } catch { }
-    }
-    refreshDashboard();
 
     // =========================================================================
     // Provider definitions
