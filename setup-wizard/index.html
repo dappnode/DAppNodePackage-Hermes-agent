@@ -688,6 +688,9 @@
     .nexus-switch input:disabled + .nexus-slider { cursor: not-allowed; background: #2a2e40; }
     .nexus-switch input:disabled + .nexus-slider::before { background: #5b6075; box-shadow: none; }
     .nexus-confirm {
+      /* The page's `* { margin: 0 }` reset strips the margin:auto that centres a
+         modal <dialog>, which pinned it to the top-left corner. */
+      margin: auto;
       padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
       background: var(--card); color: var(--text);
       width: min(420px, calc(100vw - 2rem));
