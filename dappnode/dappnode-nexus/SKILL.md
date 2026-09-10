@@ -27,12 +27,34 @@ Nexus runs as a service within the DAppNode ecosystem. Users access it via:
 - **Web UI**: https://nexus.dappnode.com/
 - **API endpoint**: `https://nexus-api.dappnode.com/v1`
 
+There are two ways to reach the API, chosen by the "Private mode" toggle in the
+setup wizard:
+
+| Route | `model.base_url` | Who can read the prompt in transit |
+|---|---|---|
+| Direct | `https://nexus-api.dappnode.com/v1` | TLS terminates at Cloudflare, so prompts are visible there |
+| Private mode | `http://nexus-local-proxy.dappnode.private:3301/v1` | Nobody between the proxy and the enclave |
+
+Private mode routes through the **nexus-local-proxy** package on the same
+DAppNode. That proxy verifies the Nexus Gateway's AWS Nitro Enclave attestation
+against a pinned trust policy and encrypts request and response bodies with
+EHBP, so an intermediary that terminates TLS cannot read them.
+
+It **fails closed**: if the Gateway cannot be verified the proxy refuses to
+run, and Hermes gets connection errors rather than a silent downgrade to the
+unprotected path. The verification page at
+`http://nexus-local-proxy.dappnode.private:3301/verification` shows the current
+verdict, the checks performed, and the raw attestation evidence for independent
+re-checking.
+
 ## Key URLs
 
 | Resource | URL |
 |----------|-----|
 | Nexus Web App | https://nexus.dappnode.com/ |
 | Nexus API | https://nexus-api.dappnode.com/v1 |
+| Attested local proxy | http://nexus-local-proxy.dappnode.private:3301/v1 |
+| Proxy verification page | http://nexus-local-proxy.dappnode.private:3301/verification |
 | DAppNode Main Site | https://dappnode.com/ |
 
 ## Privacy Guarantees
@@ -40,6 +62,9 @@ Nexus runs as a service within the DAppNode ecosystem. Users access it via:
 - Inference runs on DAppNode infrastructure, not external cloud providers
 - Data does not leave the user's controlled environment
 - No logging or retention of prompts by default
+- With Private mode on, prompt and completion bodies are additionally encrypted
+  to a measured enclave, so the TLS terminator in front of the Gateway cannot
+  read them
 
 ## Pitfalls
 
@@ -47,7 +72,7 @@ Nexus runs as a service within the DAppNode ecosystem. Users access it via:
 
 When Nexus is configured as the Hermes provider (`nexus-api.dappnode.com`), Hermes may not auto-detect the model's true context length because:
 
-1. `nexus-api.dappnode.com` is not in Hermes' `_URL_TO_PROVIDER` map → treated as an unknown custom endpoint
+1. Neither `nexus-api.dappnode.com` nor the local proxy is in Hermes' `_URL_TO_PROVIDER` map → treated as an unknown custom endpoint
 2. Hermes may skip provider-aware lookups (Anthropic API, models.dev, hardcoded defaults)
 3. Falls back to `DEFAULT_FALLBACK_CONTEXT = 256_000` tokens if auto-detection fails
 
