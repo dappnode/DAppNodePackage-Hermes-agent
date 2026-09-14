@@ -2,7 +2,7 @@
   "architectures": [
     "linux/amd64"
   ],
-  "author": "DAppNode Association <admin@dappnode.io>",
+  "author": "Dappnode Association <admin@dappnode.io>",
   "backup": [
     {
       "name": "hermes-data",
@@ -18,6 +18,9 @@
     "Developer tools",
     "Communications"
   ],
+  "dependencies": {
+    "nexus-proofs.dnp.dappnode.eth": "^0.1.0"
+  },
   "description": "Hermes Agent is a self-improving AI agent built by Nous Research. It features a built-in learning loop — creating skills from experience, improving them during use, and building a deepening model of who you are across sessions.\n\n- **Web Gateway**: Full-featured web interface for interacting with AI\n- **Multi-LLM Support**: OpenRouter, OpenAI, Anthropic, Google Gemini, Ollama, Groq, and more\n- **Messaging Gateway**: Telegram, Discord, Slack, WhatsApp, Signal — all from a single process\n- **Skills System**: Agent-curated procedural memory that self-improves\n- **Persistent Memory**: Cross-session recall with user modeling\n- **Cron Scheduling**: Automated tasks with delivery to any platform\n- **Subagent Delegation**: Spawn isolated subagents for parallel workstreams\n\nRun your own AI agent with full control over your data and API keys.",
   "exposable": [
     {
@@ -62,7 +65,8 @@
     "homepage": "https://hermes-agent.nousresearch.com",
     "setup": "http://hermes-agent.dappnode:8080",
     "terminal": "http://hermes-agent.dappnode:7681",
-    "ui": "http://hermes-agent.dappnode:8080/dashboard"
+    "ui": "http://hermes-agent.dappnode:8080/dashboard",
+    "verification": "http://nexus-proofs.dappnode.private:3301/verification"
   },
   "name": "hermes-agent.dnp.dappnode.eth",
   "repository": {
@@ -81,7 +85,7 @@
   "upstreamArg": "UPSTREAM_VERSION",
   "upstreamRepo": "NousResearch/hermes-agent",
   "upstreamVersion": "v2026.9.11",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "warnings": {
     "onRemove": "Removing this package will delete all your Hermes Agent configuration, conversation history, skills, memories, and cached data. Make sure to create a backup first."
   }
