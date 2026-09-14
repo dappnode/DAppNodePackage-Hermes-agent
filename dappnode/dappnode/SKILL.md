@@ -1,12 +1,12 @@
 ---
 name: dappnode
 description: >
-  DAppNode package operations — HTTPS exposure, port mapping, inter-package
+  Dappnode package operations — HTTPS exposure, port mapping, inter-package
   connectivity, Nexus provider setup, and troubleshooting.
   Use when the user asks about networking, exposing services, connecting
-  to other packages, or configuring AI providers on DAppNode.
+  to other packages, or configuring AI providers on Dappnode.
 version: 1.0.0
-author: DAppNode Association
+author: Dappnode Association
 license: MIT
 metadata:
   hermes:
@@ -15,22 +15,22 @@ metadata:
     related_skills: [webhook-subscriptions]
 ---
 
-# DAppNode Package Operations
+# Dappnode Package Operations
 
-This Hermes Agent runs as a DAppNode package. This skill covers DAppNode-specific procedures.
+This Hermes Agent runs as a Dappnode package. This skill covers Dappnode-specific procedures.
 
 ## Exposing a Service via HTTPS
 
-By default, services are only reachable from inside the DAppNode network. To make a service publicly accessible:
+By default, services are only reachable from inside the Dappnode network. To make a service publicly accessible:
 
-1. Direct the user to open the DAppNode UI (`http://my.dappnode`), find the Hermes Agent package, and go to its **Network** tab.
+1. Direct the user to open the Dappnode UI (`http://my.dappnode`), find the Hermes Agent package, and go to its **Network** tab.
 2. They configure:
    - **Subdomain**: a name they choose (e.g., `hermes-api`)
    - **Port**: which container port to expose (8081 for dashboard, 3000 for API, etc.)
    - **Basic auth** (optional but recommended): username and password
 3. The resulting public URL will be: `https://<subdomain>.<dyndns-domain>`
 
-This is powered by the `https.dnp.dappnode.eth` package — an Nginx reverse proxy with automatic TLS via DAppNode's dyndns wildcard certificates.
+This is powered by the `https.dnp.dappnode.eth` package — an Nginx reverse proxy with automatic TLS via Dappnode's dyndns wildcard certificates.
 
 ### Security Notes
 - Always recommend basic auth when exposing the dashboard (port 8081)
@@ -45,13 +45,13 @@ If the user needs a publicly reachable webhook URL:
 
 ## Port Mapping to Host
 
-Users can map container ports directly to the host machine's network via the **Network** tab of the Hermes Agent package in the DAppNode UI (`http://my.dappnode`).
+Users can map container ports directly to the host machine's network via the **Network** tab of the Hermes Agent package in the Dappnode UI (`http://my.dappnode`).
 
 This allows access from the local network without VPN — useful for LAN-only setups.
 
 ## Inter-Package Connectivity
 
-All DAppNode packages share the `dncore_network` Docker bridge network. Packages are reachable via DNS aliases.
+All Dappnode packages share the `dncore_network` Docker bridge network. Packages are reachable via DNS aliases.
 
 ### DNS Pattern
 - Mono-service packages: `<shortname>.dappnode`
@@ -63,8 +63,8 @@ All DAppNode packages share the `dncore_network` Docker bridge network. Packages
 curl -sf http://<package-alias>.dappnode:<port>/ -o /dev/null && echo "reachable" || echo "unreachable"
 ```
 
-### Using DAppNode Nexus (Recommended)
-DAppNode Nexus (`https://nexus.dappnode.com`) is DAppNode's own privacy-focused LLM gateway. It is OpenAI-compatible and prompts are never logged, stored, or used for training. Check the Nexus website for available models and pricing.
+### Using Dappnode Nexus (Recommended)
+Dappnode Nexus (`https://nexus.dappnode.com`) is Dappnode's own privacy-focused LLM gateway. It is OpenAI-compatible and prompts are never logged, stored, or used for training. Check the Nexus website for available models and pricing.
 
 To configure, use the Setup Wizard at `http://hermes-agent.dappnode:8080` and select Nexus as the provider. Or manually:
 1. Sign up at `https://nexus.dappnode.com` and create an API key
@@ -77,25 +77,25 @@ model:
   provider: "nexus"
 providers:
   nexus:
-    name: "DAppNode Nexus"
+    name: "Dappnode Nexus"
     base_url: "https://nexus-api.dappnode.com/v1"
     key_env: "NEXUS_API_KEY"
     default_model: "minimax/minimax-m2.7"
     api_mode: "chat_completions"
 ```
 
-Verify with `hermes doctor`; the resolved provider source should read `custom_provider:DAppNode Nexus`, not `no-key-required`.
+Verify with `hermes doctor`; the resolved provider source should read `custom_provider:Dappnode Nexus`, not `no-key-required`.
 
-**Context length pitfall**: Nexus uses a custom domain (`nexus-api.dappnode.com`) that Hermes cannot auto-resolve for context length detection — models default to 256K tokens. The DAppNode package automatically sets `model.context_length` to 1M for new setups, but if you see early context compression, run `hermes config set model.context_length 1000000`. See the `dappnode-nexus` skill for the full root-cause analysis and per-model context lengths.
+**Context length pitfall**: Nexus uses a custom domain (`nexus-api.dappnode.com`) that Hermes cannot auto-resolve for context length detection — models default to 256K tokens. The Dappnode package automatically sets `model.context_length` to 1M for new setups, but if you see early context compression, run `hermes config set model.context_length 1000000`. See the `dappnode-nexus` skill for the full root-cause analysis and per-model context lengths.
 
 ## Troubleshooting
 
 ### Package Not Reachable
-- The target package may not be installed or may be stopped — direct the user to the DAppNode UI (`http://my.dappnode`) to check
-- Hermes cannot install or manage other DAppNode packages
+- The target package may not be installed or may be stopped — direct the user to the Dappnode UI (`http://my.dappnode`) to check
+- Hermes cannot install or manage other Dappnode packages
 
 ### Configuration
-- Environment variables: editable in the **Config** tab of the Hermes Agent package in the DAppNode UI
+- Environment variables: editable in the **Config** tab of the Hermes Agent package in the Dappnode UI
 - Config file: `/opt/data/config.yaml`
 - API keys: `/opt/data/.env`
-- Logs: viewable in the **Logs** tab of the Hermes Agent package in the DAppNode UI
+- Logs: viewable in the **Logs** tab of the Hermes Agent package in the Dappnode UI
