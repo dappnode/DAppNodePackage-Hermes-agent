@@ -140,7 +140,7 @@ async function createNexusApiKey(accessToken) {
     },
     body: JSON.stringify({
       name: NEXUS_API_KEY_NAME,
-      pii_mode: "none",
+      pii_mode: "off",
     }),
     signal: AbortSignal.timeout(15000),
   });
