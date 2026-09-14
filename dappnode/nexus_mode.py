@@ -7,8 +7,8 @@ Nexus is reachable two ways, and the only difference between them is
   direct   https://nexus-api.dappnode.com/v1
            TLS terminates at Cloudflare, so prompts are readable there.
 
-  private  http://nexus-proxy.dappnode.private:3301/v1
-           The nexus-proxy package on this Dappnode verifies the
+  private  http://nexus-proofs.dappnode.private:3301/v1
+           The Nexus Proofs package on this Dappnode verifies the
            Gateway's AWS Nitro attestation and encrypts request and response
            bodies with EHBP, so the TLS terminator cannot read them.
 
@@ -33,20 +33,21 @@ from urllib.parse import urlsplit
 import yaml
 
 NEXUS_DIRECT_HOST = "nexus-api.dappnode.com"
-NEXUS_PROXY_HOST = "nexus-proxy.dappnode.private"
+NEXUS_PROOFS_HOST = "nexus-proofs.dappnode.private"
 
-# The proxy package was called nexus-local-proxy before it took the core
-# DNP_NEXUS_PROXY naming. A config written back then still names the old host,
-# which no longer resolves. Recognising it keeps the reported mode honest --
-# the user did choose private -- and boot-time migration repoints it.
-LEGACY_PROXY_HOSTS = ("nexus-local-proxy.dappnode.private",)
+# The package was called nexus-local-proxy, then nexus-proxy, before it became
+# Nexus Proofs (DNP_NEXUS_PROOFS). A config written under an older name still
+# points at a host that no longer resolves. Recognising those hosts keeps the
+# reported mode honest -- the user did choose private -- and boot-time
+# migration repoints them.
+LEGACY_HOSTS = ("nexus-local-proxy.dappnode.private", "nexus-proxy.dappnode.private")
 NEXUS_DIRECT_BASE_URL = f"https://{NEXUS_DIRECT_HOST}/v1"
-NEXUS_PROXY_BASE_URL = f"http://{NEXUS_PROXY_HOST}:3301/v1"
-NEXUS_PROXY_VERIFICATION_URL = f"http://{NEXUS_PROXY_HOST}:3301/verification"
-# Dappstore page for the proxy package, the same URL the Dappnode installer
+NEXUS_PROOFS_BASE_URL = f"http://{NEXUS_PROOFS_HOST}:3301/v1"
+NEXUS_PROOFS_VERIFICATION_URL = f"http://{NEXUS_PROOFS_HOST}:3301/verification"
+# Dappstore page for the Nexus Proofs package, the same URL the Dappnode installer
 # uses. It resolves once the package is published onchain.
-NEXUS_PROXY_DNP_NAME = "nexus-proxy.dnp.dappnode.eth"
-NEXUS_PROXY_INSTALL_URL = f"http://my.dappnode/installer/dnp/{NEXUS_PROXY_DNP_NAME}"
+NEXUS_PROOFS_DNP_NAME = "nexus-proofs.dnp.dappnode.eth"
+NEXUS_PROOFS_INSTALL_URL = f"http://my.dappnode/installer/dnp/{NEXUS_PROOFS_DNP_NAME}"
 
 MODE_DIRECT = "direct"
 MODE_PRIVATE = "private"
@@ -56,7 +57,7 @@ MODE_NOT_NEXUS = "not_nexus"
 
 BASE_URL_FOR_MODE = {
     MODE_DIRECT: NEXUS_DIRECT_BASE_URL,
-    MODE_PRIVATE: NEXUS_PROXY_BASE_URL,
+    MODE_PRIVATE: NEXUS_PROOFS_BASE_URL,
 }
 
 
@@ -85,7 +86,7 @@ def endpoint_host(base_url: str) -> str:
 
 def detect_mode(base_url: str) -> str:
     host = endpoint_host(base_url)
-    if host == NEXUS_PROXY_HOST or host in LEGACY_PROXY_HOSTS:
+    if host == NEXUS_PROOFS_HOST or host in LEGACY_HOSTS:
         return MODE_PRIVATE
     if host == NEXUS_DIRECT_HOST:
         return MODE_DIRECT
@@ -93,7 +94,7 @@ def detect_mode(base_url: str) -> str:
 
 
 def migrate_legacy_host(path: Path | None = None) -> bool:
-    """Repoint a config still naming the pre-rename proxy host.
+    """Repoint a config still naming the pre-rename host.
 
     Returns True when it rewrote something. Safe to run on every boot: it only
     touches a base_url whose host is a known legacy name.
@@ -103,9 +104,9 @@ def migrate_legacy_host(path: Path | None = None) -> bool:
     model = config.get("model")
     if not isinstance(model, dict):
         return False
-    if endpoint_host(str(model.get("base_url") or "")) not in LEGACY_PROXY_HOSTS:
+    if endpoint_host(str(model.get("base_url") or "")) not in LEGACY_HOSTS:
         return False
-    model["base_url"] = NEXUS_PROXY_BASE_URL
+    model["base_url"] = NEXUS_PROOFS_BASE_URL
     config["model"] = model
     temporary = path.with_suffix(path.suffix + ".tmp")
     with open(temporary, "w") as handle:
@@ -142,9 +143,9 @@ def read_state(path: Path | None = None) -> dict:
         "model": model.get("default") or model.get("model") or "",
         "provider": model.get("provider") or "",
         "direct_base_url": NEXUS_DIRECT_BASE_URL,
-        "private_base_url": NEXUS_PROXY_BASE_URL,
-        "verification_url": NEXUS_PROXY_VERIFICATION_URL,
-        "install_url": NEXUS_PROXY_INSTALL_URL,
+        "private_base_url": NEXUS_PROOFS_BASE_URL,
+        "verification_url": NEXUS_PROOFS_VERIFICATION_URL,
+        "install_url": NEXUS_PROOFS_INSTALL_URL,
     }
 
 

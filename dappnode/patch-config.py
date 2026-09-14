@@ -19,7 +19,7 @@ dashboard_login_path = hermes_home / "dashboard-login.txt"
 skip_dashboard_auth = os.environ.get("DAPPNODE_SKIP_DASHBOARD_AUTH") == "1"
 
 
-# Nexus is reachable either directly or through the attested local proxy. Both
+# Nexus is reachable either directly or through Nexus Proofs. Both
 # expose the same OpenAI-compatible catalog, and the model ids are identical.
 # The endpoints and the direct/private distinction live in nexus_mode so the
 # boot-time patch and the runtime switch cannot drift apart.
@@ -60,7 +60,7 @@ def fetch_nexus_context_size(base_url, model_id):
     """Return the context_size Nexus reports for model_id, or None.
 
     Tries the configured endpoint first, then the public Nexus catalog. The
-    fallback matters when Hermes points at the local proxy: proxy releases
+    fallback matters when Hermes points at Nexus Proofs: releases
     before 0.1.1 serve only chat completions and 404 on ``/models``, and the
     catalog is public either way, so there is nothing private to lose by
     asking the direct endpoint for it.
@@ -192,13 +192,13 @@ if generated_dashboard_auth:
     msg += "; dashboard credentials saved to /opt/data/dashboard-login.txt"
 print(msg)
 
-# --- Nexus proxy rename: repoint configs written before DNP_NEXUS_PROXY ---
-# The old nexus-local-proxy.dappnode.private host no longer resolves, so a
+# --- Nexus Proofs rename: repoint configs written under older package names ---
+# The old nexus-local-proxy and nexus-proxy hosts no longer resolve, so a
 # config still naming it would leave private mode permanently failing. Rewrite
 # it before the context-length lookup below reads base_url.
 if migrate_legacy_host(config_path):
     config = yaml.safe_load(open(config_path)) or {}
-    print("Nexus: repointed the proxy host to nexus-proxy.dappnode.private")
+    print("Nexus: repointed the Nexus Proofs host to nexus-proofs.dappnode.private")
 
 # --- Nexus context length: source the real value from /v1/models ---
 # Neither Nexus endpoint is in Hermes' URL-to-provider map, so the agent cannot

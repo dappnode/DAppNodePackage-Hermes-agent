@@ -746,7 +746,7 @@
             <div class="nexus-mode-title">Nexus confidentiality proofs</div>
             <div class="nexus-mode-sub" id="nexus-mode-sub">Checking…</div>
           </div>
-          <label class="nexus-switch" title="Route Nexus through the attested local proxy">
+          <label class="nexus-switch" title="Route Nexus requests through Nexus Proofs">
             <input type="checkbox" id="nexus-mode-toggle" disabled>
             <span class="nexus-slider"></span>
           </label>
@@ -1055,7 +1055,7 @@
       card.classList.toggle("is-down", isPrivate && !proxyUp);
       sub.textContent = isPrivate ? "On — proofs enabled" : "Off — proofs disabled";
 
-      const proxyLink = `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Nexus Proxy</a>`;
+      const proxyLink = `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Nexus Proofs</a>`;
       const proofsLink = `<a href="${escapeHtml(state.verification_url || "")}" target="_blank">See proofs here</a>`;
       detail.innerHTML = isPrivate
         ? `You can generate verifiable confidentiality proofs and receive them in ${proxyLink}. `
@@ -1069,8 +1069,8 @@
         toggle.disabled = true;
         nexusModeMessage(
           (isPrivate
-            ? "Proofs are on, but the Nexus Proxy is not running, so Hermes cannot reach Nexus. "
-            : "Confidentiality proofs need the Nexus Proxy package. ")
+            ? "Proofs are on, but the Nexus Proofs is not running, so Hermes cannot reach Nexus. "
+            : "Confidentiality proofs need the Nexus Proofs package. ")
           + `<a href="${escapeHtml(state.install_url || "")}" target="_blank">Install it from the Dappstore</a>.`,
           isPrivate ? "err" : null
         );
@@ -1167,14 +1167,14 @@
     // =========================================================================
 
     // Nexus can be reached two ways. The direct endpoint terminates TLS at
-    // Cloudflare, so prompts are readable there. The local proxy verifies the
+    // Cloudflare, so prompts are readable there. Nexus Proofs verifies the
     // Gateway's AWS Nitro attestation and encrypts bodies end-to-end past that
-    // point, at the cost of a hard dependency on nexus-proxy running.
+    // point, at the cost of a hard dependency on Nexus Proofs running.
     const NEXUS_DIRECT_BASE_URL = "https://nexus-api.dappnode.com/v1";
-    const NEXUS_PROXY_BASE_URL = "http://nexus-proxy.dappnode.private:3301/v1";
-    const NEXUS_PROXY_VERIFICATION_URL = "http://nexus-proxy.dappnode.private:3301/verification";
+    const NEXUS_PROOFS_BASE_URL = "http://nexus-proofs.dappnode.private:3301/v1";
+    const NEXUS_PROOFS_VERIFICATION_URL = "http://nexus-proofs.dappnode.private:3301/verification";
     // Dappstore install page, the same URL the Dappnode installer links to.
-    const NEXUS_PROXY_INSTALL_URL = "http://my.dappnode/installer/dnp/nexus-proxy.dnp.dappnode.eth";
+    const NEXUS_PROOFS_INSTALL_URL = "http://my.dappnode/installer/dnp/nexus-proofs.dnp.dappnode.eth";
     // Explains which models the confidentiality proofs cover end to end.
     const NEXUS_MODELS_DOC_URL = "https://nexus.dappnode.com/docs/sdk/private-vs-anonymous-models";
 
@@ -1188,7 +1188,7 @@
     }
 
     function nexusBaseUrl() {
-      return nexusUseProxy() ? NEXUS_PROXY_BASE_URL : NEXUS_DIRECT_BASE_URL;
+      return nexusUseProxy() ? NEXUS_PROOFS_BASE_URL : NEXUS_DIRECT_BASE_URL;
     }
 
     const PROVIDERS = [
@@ -1379,8 +1379,8 @@
             <div id="nexus-attested-notice"
               style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:8px; font-size:0.85rem; line-height:1.55;">
               <p style="margin:0 0 8px">Nexus is a privacy-preserving confidential AI provider. Your prompts are always private to us. We run our services in a TEE (Trusted Execution Environment) that can generate a verifiable proof of this confidentiality.</p>
-              <p style="margin:0 0 8px">Check this box to automatically send the proof request with your regular prompts. You will receive the proofs in the <a href="${NEXUS_PROXY_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proxy</a> package.</p>
-              <p style="margin:0">These proofs are valid for the Nexus services and won't make your requests to Anonymous models confidential to the model provider. For end-to-end verification of confidentiality, use the Nexus Proxy (this box) and Private models. <a href="${NEXUS_MODELS_DOC_URL}" target="_blank" style="color:var(--primary)">Read more about Anonymous vs. Private models</a>.</p>
+              <p style="margin:0 0 8px">Check this box to automatically send the proof request with your regular prompts. You will receive the proofs in the <a href="${NEXUS_PROOFS_INSTALL_URL}" target="_blank" style="color:var(--primary)">Nexus Proofs</a> package.</p>
+              <p style="margin:0">These proofs are valid for the Nexus services and won't make your requests to Anonymous models confidential to the model provider. For end-to-end verification of confidentiality, use the Nexus Proofs (this box) and Private models. <a href="${NEXUS_MODELS_DOC_URL}" target="_blank" style="color:var(--primary)">Read more about Anonymous vs. Private models</a>.</p>
             </div>
           </div>
         `;

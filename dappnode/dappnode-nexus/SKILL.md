@@ -30,25 +30,25 @@ Nexus runs as a service within the Dappnode ecosystem. Users access it via:
 **Nexus privacy mode** is a switch on the setup wizard's Dashboard tab. It can
 be flipped at any time, not only during setup.
 
-Turned on, prompts go through the **nexus-proxy** package on the same Dappnode,
+Turned on, prompts go through the **Nexus Proofs** package (`nexus-proofs.dnp.dappnode.eth`) on the same Dappnode,
 which keeps them encrypted until they reach Nexus, running in a TEE (trusted
 execution environment). With a model whose id does not start with `private/`,
 Nexus then passes the prompt to that model's provider, which sees it. The proxy verifies that TEE automatically on every
 connection; the user can check the proof at
-`http://nexus-proxy.dappnode.private:3301/verification`.
+`http://nexus-proofs.dappnode.private:3301/verification`.
 
 It changes **only** `model.base_url`:
 
 | Mode | `model.base_url` |
 |---|---|
 | Off | `https://nexus-api.dappnode.com/v1` |
-| On | `http://nexus-proxy.dappnode.private:3301/v1` |
+| On | `http://nexus-proofs.dappnode.private:3301/v1` |
 
 The API key, provider (`custom`) and model are the same either way, so
 switching never needs a key re-entered or the provider reconfigured. Hermes
 reads `config.yaml` at startup, so the switch restarts the package itself.
 
-The switch will not turn private mode on while `nexus-proxy` is unreachable:
+The switch will not turn private mode on while Nexus Proofs is unreachable:
 the proxy fails closed, so Hermes would just stop working. Point the user at
 the Dappstore to install it.
 
@@ -80,8 +80,8 @@ endpoints serve the same catalog.
 |----------|-----|
 | Nexus Web App | https://nexus.dappnode.com/ |
 | Nexus API | https://nexus-api.dappnode.com/v1 |
-| Attested local proxy | http://nexus-proxy.dappnode.private:3301/v1 |
-| Proxy verification page | http://nexus-proxy.dappnode.private:3301/verification |
+| Nexus Proofs endpoint | http://nexus-proofs.dappnode.private:3301/v1 |
+| Nexus Proofs verification page | http://nexus-proofs.dappnode.private:3301/verification |
 | Dappnode Main Site | https://dappnode.com/ |
 
 ## Privacy Guarantees
@@ -98,7 +98,7 @@ endpoints serve the same catalog.
 
 When Nexus is configured as the Hermes provider (`nexus-api.dappnode.com`), Hermes may not auto-detect the model's true context length because:
 
-1. Neither `nexus-api.dappnode.com` nor the local proxy is in Hermes' `_URL_TO_PROVIDER` map → treated as an unknown custom endpoint
+1. Neither `nexus-api.dappnode.com` nor Nexus Proofs is in Hermes' `_URL_TO_PROVIDER` map → treated as an unknown custom endpoint
 2. Hermes may skip provider-aware lookups (Anthropic API, models.dev, hardcoded defaults)
 3. Falls back to `DEFAULT_FALLBACK_CONTEXT = 256_000` tokens if auto-detection fails
 
