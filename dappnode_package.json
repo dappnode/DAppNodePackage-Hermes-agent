@@ -84,12 +84,12 @@
   "type": "service",
   "upstream": [
     {
+      "arg": "UPSTREAM_VERSION",
       "repo": "NousResearch/hermes-agent",
-      "version": "v2026.9.11",
-      "arg": "UPSTREAM_VERSION"
+      "version": "v0.23.1"
     }
   ],
-  "version": "0.1.9",
+  "version": "0.1.10",
   "warnings": {
     "onRemove": "Removing this package will delete all your Hermes Agent configuration, conversation history, skills, memories, and cached data. Make sure to create a backup first."
   }
