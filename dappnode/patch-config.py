@@ -11,7 +11,7 @@ import secrets
 import urllib.request
 from pathlib import Path
 
-import yaml
+import hermes_yaml as yaml
 
 hermes_home = Path(os.environ.get("HERMES_HOME", "/opt/data"))
 config_path = hermes_home / "config.yaml"
@@ -110,12 +110,21 @@ def has_whatsapp_creds(profile_home):
     return any(path.is_file() for path in candidates)
 
 
+def ensure_mapping(parent, key):
+    """Return a mutable mapping at key, replacing YAML null placeholders."""
+    value = parent.get(key)
+    if not isinstance(value, dict):
+        value = {}
+        parent[key] = value
+    return value
+
+
 def configure_dashboard_auth(config):
     if skip_dashboard_auth:
         return False
 
-    dashboard = config.setdefault("dashboard", {})
-    basic = dashboard.setdefault("basic_auth", {})
+    dashboard = ensure_mapping(config, "dashboard")
+    basic = ensure_mapping(dashboard, "basic_auth")
 
     username = str(basic.get("username") or "").strip() or "dappnode"
     basic["username"] = username
@@ -159,33 +168,31 @@ except Exception:
     config = {}
 
 # --- Network access: bind the gateway to the LAN on the Dappnode port ---
-gw = config.setdefault("gateway", {})
+gw = ensure_mapping(config, "gateway")
 gw["port"] = 3000
 gw["bind"] = "lan"
-cui = gw.setdefault("controlUi", {})
+cui = ensure_mapping(gw, "controlUi")
 cui.setdefault("dangerouslyAllowHostHeaderOriginFallback", True)
 cui.setdefault("allowInsecureAuth", True)
 cui.setdefault("dangerouslyDisableDeviceAuth", True)
 
-term = config.setdefault("terminal", {})
+term = ensure_mapping(config, "terminal")
 term["cwd"] = os.environ.get("HERMES_HOME", "/opt/data")
 
 generated_dashboard_auth = configure_dashboard_auth(config)
 
-platforms = config.setdefault("platforms", {})
-if isinstance(platforms, dict):
-    whatsapp = platforms.setdefault("whatsapp", {})
-    if isinstance(whatsapp, dict):
-        if not has_whatsapp_creds(hermes_home):
-            whatsapp["enabled"] = False
-        else:
-            whatsapp.setdefault("enabled", False)
-        extra = whatsapp.setdefault("extra", {})
-        if isinstance(extra, dict) and extra.get("bridge_port") in (None, 3000, "3000"):
-            extra["bridge_port"] = 3010
+platforms = ensure_mapping(config, "platforms")
+whatsapp = ensure_mapping(platforms, "whatsapp")
+if not has_whatsapp_creds(hermes_home):
+    whatsapp["enabled"] = False
+else:
+    whatsapp.setdefault("enabled", False)
+extra = ensure_mapping(whatsapp, "extra")
+if extra.get("bridge_port") in (None, 3000, "3000"):
+    extra["bridge_port"] = 3010
 
 with open(config_path, "w") as f:
-    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
 dashboard_auth_status = "skipped" if skip_dashboard_auth else "basic"
 msg = f"Patched config.yaml for Dappnode (api_port=3000, dashboard_auth={dashboard_auth_status}, whatsapp_bridge_port=3010)"
 if generated_dashboard_auth:
@@ -207,7 +214,7 @@ if migrate_legacy_host(config_path):
 # MiniMax M2.7 is 205K), query the endpoint Nexus already exposes:
 # GET /v1/models returns `context_size` per model. Set model.context_length to
 # that authoritative value for the configured model.
-model_section = config.setdefault("model", {})
+model_section = ensure_mapping(config, "model")
 provider = model_section.get("provider", "")
 base_url = str(model_section.get("base_url", ""))
 model_id = model_section.get("default") or model_section.get("model") or ""
@@ -217,7 +224,7 @@ if provider == "custom" and is_nexus_base_url(base_url) and model_id:
     if ctx and model_section.get("context_length") != ctx:
         model_section["context_length"] = ctx
         with open(config_path, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
         print(f"Nexus: set model.context_length={ctx} for '{model_id}' (from /v1/models)")
     elif ctx:
         print(f"Nexus: model.context_length already {ctx} for '{model_id}', leaving as-is")

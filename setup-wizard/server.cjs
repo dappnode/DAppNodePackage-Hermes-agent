@@ -408,7 +408,7 @@ async function fetchNexusModels() {
 // Overridable so the wizard can be exercised outside the image, where
 // neither the venv nor /opt/dappnode exists.
 const NEXUS_MODE_SCRIPT = process.env.NEXUS_MODE_SCRIPT || "/opt/dappnode/nexus_mode.py";
-const NEXUS_MODE_PYTHON = process.env.NEXUS_MODE_PYTHON || "/opt/hermes/.venv/bin/python3";
+const NEXUS_MODE_PYTHON = process.env.NEXUS_MODE_PYTHON || "/opt/hermes/.venv/bin/python";
 const NEXUS_PROOFS_HEALTH_URL = "http://nexus-proofs.dappnode.private:3301/healthz";
 const NEXUS_PROOFS_VERIFICATION_API = "http://nexus-proofs.dappnode.private:3301/v1/verification";
 
