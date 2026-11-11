@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-import yaml
+import hermes_yaml as yaml
 
 NEXUS_DIRECT_HOST = "nexus-api.dappnode.com"
 NEXUS_PROOFS_HOST = "nexus-proofs.dappnode.private"
@@ -110,7 +110,7 @@ def migrate_legacy_host(path: Path | None = None) -> bool:
     config["model"] = model
     temporary = path.with_suffix(path.suffix + ".tmp")
     with open(temporary, "w") as handle:
-        yaml.dump(config, handle, default_flow_style=False, sort_keys=False)
+        yaml.safe_dump(config, handle, default_flow_style=False, sort_keys=False)
     os.replace(temporary, path)
     return True
 
@@ -185,7 +185,7 @@ def set_mode(mode: str, path: Path | None = None) -> dict:
     # write cannot leave Hermes with a truncated config.yaml.
     temporary = path.with_suffix(path.suffix + ".tmp")
     with open(temporary, "w") as handle:
-        yaml.dump(config, handle, default_flow_style=False, sort_keys=False)
+        yaml.safe_dump(config, handle, default_flow_style=False, sort_keys=False)
     os.replace(temporary, path)
     return read_state(path)
 
